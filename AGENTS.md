@@ -2,8 +2,8 @@
 
 ## Current status
 
-`infrastructure_plan.md` is the source of truth. The Docker foundation is in
-place, but production application code has not been created. Do not introduce
+`infrastructure_plan.md` is the source of truth. The web-only tooling and Docker
+foundation are in place, but production application code has not been created. Do not introduce
 pages, routes, API handlers, domain models, authentication, or business data
 while performing infrastructure work.
 
@@ -11,11 +11,16 @@ while performing infrastructure work.
 
 - `infrastructure_plan.md` — approved decisions; revise it through the
   planning skill before changing architectural choices.
-- `docker/backend.Dockerfile` and `docker-compose.yml` — Docker tooling and
-  local PostgreSQL only.
+- `docker/backend.Dockerfile`, `docker-compose.yml`, and `.dockerignore` —
+  Docker tooling and local PostgreSQL only.
 - `scripts/docker-smoke.sh` — infrastructure-owned smoke test.
-- `.github/workflows/` — not created yet.
-- `backend/`, `web/`, `mobile/`, `tests/`, and `docs/` — not created yet.
+- `backend/` — Python dependency/tool configuration and infrastructure-only tests;
+  no Django application package exists yet.
+- `web/` — React/Vite dependency/tool configuration and infrastructure-only tests;
+  no React application entrypoint exists yet.
+- `.github/workflows/pr-checks.yml` — web-only pull-request quality checks.
+- `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
+- `docs/` — not created yet.
 - `.agents/skills/` — project-specific skills and instructions.
 
 ## Required reading and skill selection
@@ -46,6 +51,8 @@ For Docker changes, run:
 docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
 docker compose config --quiet
 ./scripts/docker-smoke.sh
+(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
+(cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test)
 git diff --check
 ```
 

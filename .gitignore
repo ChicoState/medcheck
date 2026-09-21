@@ -14,13 +14,14 @@ __pycache__/
 coverage.xml
 htmlcov/
 
-# JavaScript and mobile
+# JavaScript
 node_modules/
 dist/
 build/
 coverage/
 playwright-report/
 test-results/
+.pnpm-store/
 
 # Docker/local services
 postgres-data/
@@ -29,4 +30,3 @@ postgres-data/
 .DS_Store
 .idea/
 .vscode/
-

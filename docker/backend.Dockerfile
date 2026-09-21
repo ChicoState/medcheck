@@ -11,7 +11,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 COPY --from=uv /uv /uvx /bin/
 
-RUN groupadd --gid 10001 app \
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libatomic1 \
+    && rm --recursive --force /var/lib/apt/lists/* \
+    && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --create-home --shell /usr/sbin/nologin app
 
 WORKDIR /workspace/backend

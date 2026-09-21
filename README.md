@@ -2,9 +2,9 @@
 
 ## Status
 
-Infrastructure setup has begun. The repository currently provides a pinned
-Docker development-tooling image and a local PostgreSQL service; no production
-Django, React, or React Native application code exists yet.
+The repository has a web-only development foundation: pinned backend and web
+tooling, a local PostgreSQL service, and pull-request checks. No production
+Django or React application code exists yet.
 
 ## Repository map
 
@@ -14,37 +14,54 @@ Django, React, or React Native application code exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
+- `backend/` — Python/Django tooling, locked dependencies, and infrastructure
+  probes; no Django project or API code exists yet.
+- `web/` — React/Vite tooling, locked dependencies, and infrastructure probes;
+  no page, component, or Vite entrypoint exists yet.
+- `.github/workflows/pr-checks.yml` — web-only infrastructure quality checks.
+- `.github/dependabot.yml` — weekly dependency-update configuration.
 - `infrastructure_plan.md` — the approved infrastructure plan and source of
   truth for future configuration.
 - `.agents/skills/` — local agent skills.
-- `backend/`, `web/`, `mobile/`, and `tests/` — not created yet.
+- `docs/` and production application source directories — not created yet.
 
 ## Getting Started
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-   or Docker Engine with Compose v2, then confirm `docker version` and
-   `docker compose version` succeed.
+   or Docker Engine with Compose v2, [Python 3.13](https://www.python.org/downloads/),
+   [uv](https://docs.astral.sh/uv/getting-started/installation/), and Node.js
+   22 LTS with Corepack enabled. The Docker image supplies Python and uv only
+   for Docker work; host tools support editor and local quality-check workflows.
 2. Optionally copy the non-secret local database defaults:
 
    ```bash
    cp .env.example .env
    ```
 
-3. Build the development-tooling image:
+3. Install the locked tooling dependencies:
+
+   ```bash
+   (cd backend && uv sync --all-groups --frozen)
+   (cd web && corepack enable && pnpm install --frozen-lockfile)
+   ```
+
+4. Build the development-tooling image:
 
    ```bash
    docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
    ```
 
-4. Start PostgreSQL locally:
+5. Start PostgreSQL locally:
 
    ```bash
    docker compose up --detach postgres
    ```
 
-5. Verify and clean up the Docker foundation:
+6. Run the available infrastructure checks and clean up the Docker foundation:
 
    ```bash
+   (cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
+   (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test)
    ./scripts/docker-smoke.sh
    docker compose down --volumes
    ```
@@ -53,9 +70,9 @@ The local database is exposed only on `127.0.0.1:5432` by default. Change
 `POSTGRES_PORT` in an untracked `.env` if that port is occupied. Reset local
 database data with `docker compose down --volumes`.
 
-Python, uv, Node.js/pnpm, Android Studio/SDK, and Xcode remain host
-prerequisites for their respective future application development workflows.
-Docker does not replace native mobile SDKs, signing, or notarization.
+Vite builds and Playwright end-to-end tests are intentionally unavailable until
+the future React application supplies an entrypoint and workflows. A production
+release workflow is also deferred until a hosting provider is selected.
 
 ## Troubleshooting
 
@@ -65,3 +82,5 @@ Docker does not replace native mobile SDKs, signing, or notarization.
   restart the Compose service.
 - **A stale database is causing unexpected results:** run `docker compose down
   --volumes` before starting again.
+- **`uv` or `pnpm` is missing:** install the host prerequisite from the links
+  above, then rerun the locked install command.
