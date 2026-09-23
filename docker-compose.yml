@@ -1,0 +1,30 @@
+name: medcheck
+
+services:
+  postgres:
+    image: postgres:17.6-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-medcheck}
+      POSTGRES_USER: ${POSTGRES_USER:-medcheck}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medcheck_local_only}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-127.0.0.1:5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  postgres-data:
+
+networks:
+  local:
+    driver: bridge
+

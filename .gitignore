@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.coverage
+coverage.xml
+htmlcov/
+
+# JavaScript
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+.pnpm-store/
+
+# Docker/local services
+postgres-data/
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
