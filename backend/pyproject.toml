@@ -5,7 +5,7 @@ description = "Infrastructure-only backend tooling for Medcheck."
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "Django>=5.2,<5.3",
-  "djangorestframework>=3.16,<3.17",
+  "djangorestframework>=3.16,<3.19",
   "psycopg[binary]>=3.2,<3.3",
 ]
 
