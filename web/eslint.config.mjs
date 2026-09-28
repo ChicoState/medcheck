@@ -2,7 +2,7 @@ import eslint from "@eslint/js";
 
 export default [
   {
-    ignores: [".pnpm-store/**", "coverage/**", "node_modules/**"],
+    ignores: [".pnpm-store/**", "coverage/**", "dist/**", "node_modules/**"],
   },
   eslint.configs.recommended,
   {
