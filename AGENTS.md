@@ -2,10 +2,12 @@
 
 ## Current status
 
-`infrastructure_plan.md` is the source of truth. The web tooling, Vite entrypoint,
-Docker foundation, and minimal Django project scaffold are in place. Do not
-introduce product pages, API handlers, domain models, authentication, or
-business data while performing infrastructure work.
+`infrastructure_plan.md` is the source of truth for architectural decisions. The
+web tooling, MedCheck landing-page prototype, Playwright tests, Docker
+foundation, and minimal Django project scaffold are in place. The landing page
+only echoes a local search term; no medical search, production API, domain
+model, authentication, or persistence workflow exists. Do not expand product
+behavior while performing infrastructure work.
 
 ## Repository map
 
@@ -17,10 +19,11 @@ business data while performing infrastructure work.
 - `backend/` — Django project scaffold, Python dependency/tool configuration, and
   infrastructure-only tests; no API or business application package exists yet.
 - `web/` — React/Vite entrypoint, dependency/tool configuration, and
-  infrastructure-only tests; no product pages or business UI exists yet.
-- `.github/workflows/pr-checks.yml` — web-only pull-request quality checks.
+  the landing-page prototype with infrastructure and Playwright tests.
+- `.github/workflows/pr-checks.yml` — secret, backend, web, build, and browser
+  pull-request quality checks.
 - `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
-- `docs/` — not created yet.
+- `docs/specs/` — application and setup specifications.
 - `.agents/skills/` — project-specific skills and instructions.
 
 ## Required reading and skill selection
@@ -52,7 +55,8 @@ docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
 docker compose config --quiet
 ./scripts/docker-smoke.sh
 (cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
-(cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test)
+(cd backend && set -a && source ../.env.example && set +a && uv run python manage.py check)
+(cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
 git diff --check
 ```
 
