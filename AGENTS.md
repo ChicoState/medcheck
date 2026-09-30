@@ -2,10 +2,10 @@
 
 ## Current status
 
-`infrastructure_plan.md` is the source of truth. The web-only tooling and Docker
-foundation are in place, but production application code has not been created. Do not introduce
-pages, routes, API handlers, domain models, authentication, or business data
-while performing infrastructure work.
+`infrastructure_plan.md` is the source of truth. The web tooling, Vite entrypoint,
+Docker foundation, and minimal Django project scaffold are in place. Do not
+introduce product pages, API handlers, domain models, authentication, or
+business data while performing infrastructure work.
 
 ## Repository map
 
@@ -14,10 +14,10 @@ while performing infrastructure work.
 - `docker/backend.Dockerfile`, `docker-compose.yml`, and `.dockerignore` —
   Docker tooling and local PostgreSQL only.
 - `scripts/docker-smoke.sh` — infrastructure-owned smoke test.
-- `backend/` — Python dependency/tool configuration and infrastructure-only tests;
-  no Django application package exists yet.
-- `web/` — React/Vite dependency/tool configuration and infrastructure-only tests;
-  no React application entrypoint exists yet.
+- `backend/` — Django project scaffold, Python dependency/tool configuration, and
+  infrastructure-only tests; no API or business application package exists yet.
+- `web/` — React/Vite entrypoint, dependency/tool configuration, and
+  infrastructure-only tests; no product pages or business UI exists yet.
 - `.github/workflows/pr-checks.yml` — web-only pull-request quality checks.
 - `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
 - `docs/` — not created yet.

@@ -12,10 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: gitleaks/gitleaks-action@v2
-        //changed here because github told me...
         env:
-        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   backend:
     name: Backend tooling
@@ -60,13 +63,12 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
       - uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
-      - name: Enable Corepack
-        run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
       - name: Install locked dependencies

@@ -2,9 +2,9 @@
 
 ## Status
 
-The repository has a web-only development foundation: pinned backend and web
-tooling, a local PostgreSQL service, and pull-request checks. No production
-Django or React application code exists yet.
+The repository has minimal Django and React/Vite application scaffolds, a local
+PostgreSQL service, and pull-request checks. No production API, domain models,
+or product UI exists yet.
 
 ## Repository map
 
@@ -14,10 +14,10 @@ Django or React application code exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — Python/Django tooling, locked dependencies, and infrastructure
-  probes; no Django project or API code exists yet.
-- `web/` — React/Vite tooling, locked dependencies, and infrastructure probes;
-  no page, component, or Vite entrypoint exists yet.
+- `backend/` — minimal Django project scaffold, Python/Django tooling, locked
+  dependencies, and infrastructure probes; no API or business code exists yet.
+- `web/` — React/Vite entrypoint, locked dependencies, infrastructure probes, and
+  the initial application shell; no product page or business UI exists yet.
 - `.github/workflows/pr-checks.yml` — web-only infrastructure quality checks.
 - `.github/dependabot.yml` — weekly dependency-update configuration.
 - `infrastructure_plan.md` — the approved infrastructure plan and source of
@@ -70,9 +70,9 @@ The local database is exposed only on `127.0.0.1:5432` by default. Change
 `POSTGRES_PORT` in an untracked `.env` if that port is occupied. Reset local
 database data with `docker compose down --volumes`.
 
-Vite builds and Playwright end-to-end tests are intentionally unavailable until
-the future React application supplies an entrypoint and workflows. A production
-release workflow is also deferred until a hosting provider is selected.
+Playwright end-to-end tests are intentionally deferred until the first product
+workflow exists. A production release workflow is also deferred until a hosting
+provider is selected.
 
 ## Troubleshooting
 
