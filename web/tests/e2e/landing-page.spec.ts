@@ -52,18 +52,68 @@ test("does not submit an empty search", async ({ page }) => {
   await expect(page.getByRole("status")).toHaveText("");
 });
 
-test("opens the menu and account panels", async ({ page }) => {
+test("opens the sliding navigation drawer and account panel", async ({
+  page,
+}) => {
   await page.goto("/");
 
   const menuButton = page.getByRole("button", { name: "Open menu" });
   const accountButton = page.getByRole("button", { name: "Account" });
+  const drawer = page.getByRole("navigation", { name: "Menu" });
 
+  await expect(drawer).toBeHidden();
   await menuButton.click();
-  await expect(page.getByText("Menu", { exact: true })).toBeVisible();
+  await expect(drawer).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Saved Medicines" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("button", { name: "Close menu" })).toBeVisible();
   await expect(menuButton).toHaveAttribute("aria-expanded", "true");
 
+  await page.getByRole("button", { name: "Close menu" }).click({
+    position: { x: 400, y: 200 },
+  });
   await accountButton.click();
   await expect(page.getByText("Account", { exact: true })).toBeVisible();
-  await expect(page.getByText("Menu", { exact: true })).toHaveCount(0);
+  await expect(drawer).toBeHidden();
   await expect(accountButton).toHaveAttribute("aria-expanded", "true");
+});
+
+test("closes the navigation menu with Escape and restores focus", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const menuButton = page.getByRole("button", { name: "Open menu" });
+  await menuButton.click();
+  await page.keyboard.press("Escape");
+
+  await expect(page.getByRole("navigation", { name: "Menu" })).toBeHidden();
+  await expect(menuButton).toBeFocused();
+  await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+});
+
+test("closes the navigation drawer from its backdrop", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.getByRole("button", { name: "Close menu" }).click({
+    position: { x: 400, y: 200 },
+  });
+
+  await expect(page.getByRole("navigation", { name: "Menu" })).toBeHidden();
+});
+
+test("redirects logged-out users away from Saved Medicines", async ({
+  page,
+}) => {
+  await page.goto("/saved-medicines");
+
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("heading", { name: "MedCheck" })).toBeVisible();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await expect(page.getByRole("link", { name: "Saved Medicines" })).toHaveCount(
+    0,
+  );
 });
