@@ -3,8 +3,11 @@
 ## Status
 
 The repository has minimal Django and React/Vite application scaffolds, a local
-PostgreSQL service, and pull-request checks. No production API, domain models,
-or product UI exists yet.
+PostgreSQL service, and pull-request checks. FDA drug-label interaction text
+can be imported into PostgreSQL; it is source material, not a complete
+normalized interaction knowledge base or clinical advice. No production API or
+product UI exists yet. A private user-data foundation stores account identity,
+optional date of birth and gender, and user-listed medication names.
 
 ## Repository map
 
@@ -14,8 +17,9 @@ or product UI exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — minimal Django project scaffold, Python/Django tooling, locked
-  dependencies, and infrastructure probes; no API or business code exists yet.
+- `backend/` — Django project, private account/health-data and FDA-label import
+  applications, Python/Django tooling, locked dependencies, and infrastructure
+  probes; no API exists yet.
 - `web/` — React/Vite entrypoint, locked dependencies, infrastructure probes, and
   the initial application shell; no product page or business UI exists yet.
 - `.github/workflows/pr-checks.yml` — web-only infrastructure quality checks.
@@ -23,7 +27,9 @@ or product UI exists yet.
 - `infrastructure_plan.md` — the approved infrastructure plan and source of
   truth for future configuration.
 - `.agents/skills/` — local agent skills.
-- `docs/` and production application source directories — not created yet.
+- `docs/specs/` — proposed application specifications awaiting review.
+- `docs/decisions/` — durable architecture decision records.
+- Production application source directories — not created yet.
 
 ## Getting Started
 
@@ -57,7 +63,22 @@ or product UI exists yet.
    docker compose up --detach postgres
    ```
 
-6. Run the available infrastructure checks and clean up the Docker foundation:
+6. Configure the backend to use that local database, apply migrations, and
+   optionally import FDA label source text:
+
+   ```bash
+   export DATABASE_URL='postgresql://medcheck:medcheck_local_only@127.0.0.1:5432/medcheck'
+   export DJANGO_SECRET_KEY='local-development-only'
+   (cd backend && uv run python manage.py migrate)
+   (cd backend && uv run python manage.py import_fda_drug_labels --max-pages 1)
+   ```
+
+   The import command only uses FDA's fixed Drug Labeling endpoint. It retains
+   raw `drug_interactions` text by label version; it does not infer drug pairs,
+   severity, contraindications, or patient-specific guidance. Increase
+   `--max-pages` (up to 100) deliberately when importing a larger batch.
+
+7. Run the available checks and clean up the Docker foundation:
 
    ```bash
    (cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)

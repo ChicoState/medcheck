@@ -14,13 +14,14 @@ business data while performing infrastructure work.
 - `docker/backend.Dockerfile`, `docker-compose.yml`, and `.dockerignore` —
   Docker tooling and local PostgreSQL only.
 - `scripts/docker-smoke.sh` — infrastructure-owned smoke test.
-- `backend/` — Django project scaffold, Python dependency/tool configuration, and
-  infrastructure-only tests; no API or business application package exists yet.
+- `backend/` — Django project, private account/health-data and FDA-label import
+  applications, Python dependency/tool configuration, and tests; no API exists yet.
 - `web/` — React/Vite entrypoint, dependency/tool configuration, and
   infrastructure-only tests; no product pages or business UI exists yet.
 - `.github/workflows/pr-checks.yml` — web-only pull-request quality checks.
 - `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
-- `docs/` — not created yet.
+- `docs/specs/` — approved and proposed implementation specifications.
+- `docs/decisions/` — durable architecture decision records.
 - `.agents/skills/` — project-specific skills and instructions.
 
 ## Required reading and skill selection

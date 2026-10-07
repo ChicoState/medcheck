@@ -15,7 +15,7 @@
 ## 2. Connectivity and Application Shape
 
 - **Connectivity model:** Single-user web-enabled.
-- **Accounts and authentication:** One account per user; authentication is required. Choose a maintained Django-compatible authentication approach during implementation.
+- **Accounts and authentication:** One account per user; authentication is required. Use the project-owned Django `accounts.User` model with unique email as its login identifier; future login flows must use Django's maintained authentication primitives.
 - **Backend required:** Yes: a single Django application exposes the API and owns account data.
 - **Cross-device persistence:** Hosted PostgreSQL is the source of truth.
 - **Interaction between accounts:** None planned; user data remains private to its owner.

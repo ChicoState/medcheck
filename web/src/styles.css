@@ -114,6 +114,63 @@ body::before {
   line-height: 1.6;
 }
 
+.workspace {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.5rem;
+}
+.panel {
+  max-width: 38rem;
+  border-top: 3px solid #92b49b;
+  padding: 1.5rem 0;
+}
+.panel h1,
+.panel h2 {
+  color: #203c34;
+}
+.panel form {
+  display: grid;
+  gap: 1rem;
+}
+label {
+  display: grid;
+  gap: 0.4rem;
+  color: #203c34;
+  font-weight: 650;
+}
+input {
+  border: 1px solid #aab8ae;
+  border-radius: 0.25rem;
+  padding: 0.65rem;
+  font: inherit;
+}
+button {
+  width: fit-content;
+  border: 0;
+  border-radius: 0.25rem;
+  padding: 0.65rem 0.9rem;
+  background: #203c34;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.link-button {
+  margin: 0.75rem 0;
+  padding: 0;
+  background: transparent;
+  color: #315e4f;
+  text-decoration: underline;
+}
+.error {
+  color: #9b1c1c;
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
 @media (max-width: 600px) {
   .shell {
     width: min(100% - 2rem, 72rem);
