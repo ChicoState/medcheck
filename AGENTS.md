@@ -9,6 +9,33 @@ only echoes a local search term; no medical search, production API, domain
 model, authentication, or persistence workflow exists. Do not expand product
 behavior while performing infrastructure work.
 
+## MVC design requirement
+
+All agents must build application features with Model–View–Controller (MVC)
+separation in mind. Keep data and business rules, presentation, and request
+coordination separate so each responsibility can be maintained and tested
+independently. Apply this within the approved React and Django architecture:
+
+- **Model:** Django models own persistent domain data and constraints. Keep
+  business rules in the backend model/domain layer, using focused services when
+  a workflow spans models. React types and local state do not replace this layer.
+- **View:** React components render data and collect user input. Keep domain
+  rules and persistence logic out of presentation components; local UI state
+  and simple UI event handlers may remain in components.
+- **Controller:** Django/DRF request handlers coordinate input validation,
+  authorization, domain operations, and responses. Keep handlers thin and
+  delegate business rules to the model/domain layer. Isolate frontend API
+  access and workflow coordination from rendering as features grow.
+
+Django uses Model–Template–View (MTV) terminology: its API views perform much of
+the controller responsibility described here, while React provides the user
+interface. Follow framework conventions without requiring literal `controllers`
+directories or unnecessary abstraction layers.
+
+For each feature, identify these responsibilities in its specification and
+review their separation during implementation. The current scaffold is not a
+complete MVC implementation; apply this requirement as product behavior is built.
+
 ## Repository map
 
 - `infrastructure_plan.md` — approved decisions; revise it through the

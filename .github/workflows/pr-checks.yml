@@ -6,6 +6,15 @@ on:
 permissions:
   contents: read
 
+env:
+  DJANGO_SECRET_KEY: ci-only-disposable-django-key
+  DJANGO_DEBUG: "true"
+  POSTGRES_DB: medcheck_ci
+  POSTGRES_USER: medcheck
+  POSTGRES_PASSWORD: ""
+  POSTGRES_HOST: 127.0.0.1
+  POSTGRES_DB_PORT: "5432"
+
 jobs:
   secrets:
     name: Secret scan
@@ -21,8 +30,21 @@ jobs:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   backend:
-    name: Backend tooling
+    name: Backend checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_DB: medcheck_ci
+          POSTGRES_USER: medcheck
+          # Disposable CI database, reachable only through the runner's loopback.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medcheck -d medcheck_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     defaults:
       run:
         working-directory: backend
@@ -43,10 +65,15 @@ jobs:
         run: uv run ruff check .
       - name: Type check
         run: uv run pyright
-      - name: Run infrastructure tests with coverage
-        run: uv run pytest --cov=tests --cov-report=xml
-      - name: Scan Python infrastructure
-        run: uv run bandit --quiet --recursive tests
+      - name: Check Django configuration and migrations
+        run: |
+          uv run python manage.py check
+          uv run python manage.py makemigrations --check --dry-run
+          uv run python manage.py migrate --noinput
+      - name: Run backend tests with coverage
+        run: uv run pytest --cov=accounts --cov-report=xml
+      - name: Scan backend code
+        run: uv run bandit --quiet --recursive accounts config
       - name: Upload backend coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -58,11 +85,32 @@ jobs:
   web:
     name: Web tooling
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-bookworm
+        env:
+          POSTGRES_DB: medcheck_ci
+          POSTGRES_USER: medcheck
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medcheck -d medcheck_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     defaults:
       run:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+      - name: Install locked backend dependencies
+        run: uv sync --project ../backend --all-groups --frozen
       - uses: pnpm/action-setup@v4
         with:
           version: 10.4.1
@@ -85,7 +133,7 @@ jobs:
         run: pnpm build
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
-      - name: Run landing-page browser tests
+      - name: Run account and landing-page browser tests
         run: pnpm test:e2e
       - name: Upload web coverage
         if: always()
@@ -99,5 +147,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: web/playwright-report
+          path: |
+            web/playwright-report
+            web/test-results
           if-no-files-found: ignore

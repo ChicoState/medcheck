@@ -15,11 +15,36 @@
 ## 2. Connectivity and Application Shape
 
 - **Connectivity model:** Single-user web-enabled.
-- **Accounts and authentication:** One account per user; authentication is required. Choose a maintained Django-compatible authentication approach during implementation.
+- **Accounts and authentication:** One account per user; basic username-and-password registration and sign-in using Django's built-in authentication, password hashing, and sessions. Email is not required. See the confirmed account scope below.
 - **Backend required:** Yes: a single Django application exposes the API and owns account data.
 - **Cross-device persistence:** Hosted PostgreSQL is the source of truth.
 - **Interaction between accounts:** None planned; user data remains private to its owner.
 - **Primary application components:** Django API, React web client, and PostgreSQL.
+
+### Confirmed Basic Account Scope
+
+- **User workflow:** Users can register with a username and password, sign in,
+  remain signed in across page refreshes while their session is valid, and sign
+  out. React navigation must reflect the server-confirmed authentication state.
+- **Account storage:** Persist accounts in PostgreSQL through Django models and
+  migrations. The current Django scaffold uses SQLite; implementation must
+  connect it to the selected PostgreSQL database.
+- **MVC separation:** Django models own account data; Django authentication
+  handles password and session behavior; thin API handlers coordinate requests;
+  React renders forms and authentication state. Keep persistence and account
+  rules out of presentation components, following `AGENTS.md`.
+- **Basic validation and protection:** Reject duplicate usernames and invalid
+  credentials, use Django password validation and hashing, protect session-based
+  requests against CSRF, and never allow public registration to grant staff or
+  superuser privileges.
+- **Verification during implementation:** Test registration, duplicate usernames,
+  invalid credentials, login, logout, account persistence in PostgreSQL, session
+  restoration after refresh, and the connected React workflow.
+- **Excluded from this work:** Google or other social sign-in, admin portal setup
+  or customization, email verification, password recovery, and medicine storage.
+  The existing Django admin scaffold does not require expansion for this scope.
+- **Status:** These are confirmed planning requirements; account functionality
+  has not yet been implemented.
 
 ## 3. Selected Technology Stack
 
@@ -174,4 +199,4 @@ These are developer-workstation prerequisites that will not be supplied by the p
 
 - **Assumptions:** The application handles private personal data, requires normal account authentication, does not currently require uploads, collaboration, or offline-first synchronization, and will use one deployable Django backend rather than microservices.
 - **Decisions still requiring an external account, credential, certificate, or organizational approval:** Hosting provider and container registry; PostgreSQL provider; production-domain ownership.
-- **Items to confirm before implementation begins:** Primary user workflow and data model, authentication provider/method, privacy and retention requirements, exact supported browser versions, hosting and registry providers, and coverage threshold.
+- **Items to confirm before implementation begins:** Primary medical workflow and domain data model, privacy and retention requirements, exact supported browser versions, hosting and registry providers, and coverage threshold. The basic account workflow and username/password authentication method are confirmed above.

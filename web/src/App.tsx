@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { AuthPage, SessionStatus } from "./auth/AuthPage";
+import { useAuth, type Auth } from "./auth/useAuth";
 
 type OpenPanel = "menu" | "account" | null;
 
@@ -9,12 +11,12 @@ export type SavedMedicine = {
 };
 
 type AppProps = {
-  isAuthenticated?: boolean;
   savedMedicines?: SavedMedicine[];
 };
 
-function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
+function Navigation({ auth }: { auth: Auth }) {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const [logoutError, setLogoutError] = useState("");
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
         <NavLink to="/" end onClick={() => setOpenPanel(null)}>
           Home
         </NavLink>
-        {isAuthenticated && (
+        {auth.user && (
           <NavLink to="/saved-medicines" onClick={() => setOpenPanel(null)}>
             Saved Medicines
           </NavLink>
@@ -99,9 +101,36 @@ function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
       {openPanel === "account" && (
         <div className="popover account-panel" id="account-panel">
           <p className="popover-title">Account</p>
-          <button type="button" onClick={() => setOpenPanel(null)}>
-            Sign in
-          </button>
+          {auth.loading || auth.sessionError ? (
+            <SessionStatus auth={auth} />
+          ) : auth.user ? (
+            <>
+              <p className="account-username">{auth.user.username}</p>
+              <button
+                type="button"
+                disabled={auth.busy}
+                onClick={async () => {
+                  setLogoutError("");
+                  const errors = await auth.submit("logout");
+                  if (errors)
+                    setLogoutError(Object.values(errors).flat().join(" "));
+                  else setOpenPanel(null);
+                }}
+              >
+                {auth.busy ? "Signing out…" : "Sign out"}
+              </button>
+              {logoutError && <p role="alert">{logoutError}</p>}
+            </>
+          ) : (
+            <>
+              <NavLink to="/sign-in" onClick={() => setOpenPanel(null)}>
+                Sign in
+              </NavLink>
+              <NavLink to="/register" onClick={() => setOpenPanel(null)}>
+                Create account
+              </NavLink>
+            </>
+          )}
         </div>
       )}
     </header>
@@ -185,19 +214,27 @@ function SavedMedicinesPage({ medicines }: { medicines: SavedMedicine[] }) {
   );
 }
 
-export function App({
-  isAuthenticated = false,
-  savedMedicines = [],
-}: AppProps) {
+export function App({ savedMedicines = [] }: AppProps) {
+  const auth = useAuth();
   return (
     <main className="app-shell">
-      <Navigation isAuthenticated={isAuthenticated} />
+      <Navigation auth={auth} />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route
+          path="/register"
+          element={<AuthPage key="register" mode="register" auth={auth} />}
+        />
+        <Route
+          path="/sign-in"
+          element={<AuthPage key="login" mode="login" auth={auth} />}
+        />
+        <Route
           path="/saved-medicines"
           element={
-            isAuthenticated ? (
+            auth.loading || auth.sessionError ? (
+              <SessionStatus auth={auth} />
+            ) : auth.user ? (
               <SavedMedicinesPage medicines={savedMedicines} />
             ) : (
               <Navigate to="/" replace />

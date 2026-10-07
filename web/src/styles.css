@@ -63,6 +63,114 @@ input {
 
 .account-panel {
   right: 0;
+  max-width: min(22rem, calc(100vw - 3rem));
+  overflow-wrap: anywhere;
+}
+
+.account-username {
+  margin: 0.5rem;
+  font-weight: 650;
+}
+
+.popover a {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  color: #1d332b;
+  text-decoration: none;
+}
+
+.popover a:hover,
+.popover a:focus-visible {
+  background: #edf3ee;
+  outline: 2px solid #6c9a7d;
+}
+
+.auth-panel {
+  width: min(100%, 26rem);
+  padding: 6rem 0 3rem;
+}
+
+.auth-panel h1 {
+  font-size: clamp(2.5rem, 7vw, 3.5rem);
+}
+
+.auth-panel > p,
+.field-help {
+  color: #60716b;
+  line-height: 1.5;
+}
+
+.auth-panel a {
+  color: #24563f;
+  text-underline-offset: 0.2em;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.75rem;
+  margin: 2rem 0;
+}
+
+.auth-form label {
+  font-weight: 650;
+}
+
+.auth-form input {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #c7d2ca;
+  border-radius: 0.5rem;
+  background: #fffefa;
+  color: #1d332b;
+}
+
+.auth-form input:focus-visible,
+.primary-button:focus-visible {
+  outline: 3px solid #9bc4a7;
+  outline-offset: 2px;
+}
+
+.field-help {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.primary-button {
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #2f6b4f;
+  color: #fffefa;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  background: #24563f;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.auth-errors {
+  padding: 0.75rem;
+  border: 1px solid #b97969;
+  border-radius: 0.5rem;
+  background: #fff2ed;
+  color: #823e2b;
+  overflow-wrap: anywhere;
+}
+
+.auth-errors p {
+  margin: 0.25rem 0;
+}
+
+.session-status {
+  max-width: 26rem;
+  padding: 1rem;
 }
 
 .drawer-backdrop {

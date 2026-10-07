@@ -23,10 +23,11 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
+DJANGO_SETTINGS_MODULE = "config.settings"
 
 [tool.coverage.run]
 branch = true
-source = ["tests"]
+source = ["accounts", "config"]
 
 [tool.coverage.report]
 show_missing = true
@@ -41,5 +42,5 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pyright]
 pythonVersion = "3.13"
-include = ["tests"]
+include = ["accounts", "config", "tests"]
 typeCheckingMode = "basic"
