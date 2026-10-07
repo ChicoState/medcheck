@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,7 +39,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    "accounts",
+    "drug_labels",
 ]
+
+AUTH_USER_MODEL = "accounts.User"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -70,15 +80,38 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 
+def database_settings(database_url: str) -> dict[str, str]:
+    """Return Django's PostgreSQL connection settings from a DATABASE_URL."""
+    parsed = urlparse(database_url)
+    database_name = parsed.path.removeprefix("/")
+
+    if (
+        parsed.scheme not in {"postgres", "postgresql"}
+        or not parsed.hostname
+        or not parsed.username
+        or parsed.password is None
+        or not database_name
+    ):
+        raise ValueError("DATABASE_URL must be a complete PostgreSQL connection URL.")
+
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError("DATABASE_URL must contain a valid port.") from error
+
+    return {
+        "ENGINE": "django.db.backends.postgresql",
+        "HOST": parsed.hostname,
+        "NAME": unquote(database_name),
+        "PASSWORD": unquote(parsed.password),
+        "PORT": str(port or 5432),
+        "USER": unquote(parsed.username),
+    }
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+DATABASES = {"default": database_settings(os.environ["DATABASE_URL"])}
 
 
 # Password validation
