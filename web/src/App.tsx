@@ -1,226 +1,210 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 
-type Profile = { email: string; date_of_birth: string | null; gender: string };
-type Medication = { id: number; name: string };
+type OpenPanel = "menu" | "account" | null;
 
-async function api<T>(path: string, method = "GET", body?: object): Promise<T> {
-  if (method !== "GET")
-    await fetch("/api/auth/csrf/", { credentials: "same-origin" });
-  const token = document.cookie
-    .split("; ")
-    .find((item) => item.startsWith("csrftoken="))
-    ?.split("=")[1];
-  const response = await fetch(path, {
-    method,
-    credentials: "same-origin",
-    headers:
-      method !== "GET"
-        ? {
-            ...(body ? { "Content-Type": "application/json" } : {}),
-            "X-CSRFToken": token ?? "",
-          }
-        : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok)
-    throw new Error(
-      (
-        (await response.json().catch(() => ({}))) as {
-          error?: { message?: string };
-        }
-      ).error?.message ?? "Please try again.",
-    );
-  return response.status === 204
-    ? (undefined as T)
-    : ((await response.json()) as T);
+export type SavedMedicine = {
+  id: string;
+  name: string;
+};
+
+type AppProps = {
+  isAuthenticated?: boolean;
+  savedMedicines?: SavedMedicine[];
+};
+
+function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (openPanel !== "menu") {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function closeMenu(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpenPanel(null);
+        menuButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", closeMenu);
+    return () => {
+      document.removeEventListener("keydown", closeMenu);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [openPanel]);
+
+  return (
+    <header className="top-bar">
+      <button
+        ref={menuButtonRef}
+        className="icon-button"
+        type="button"
+        aria-label="Open menu"
+        aria-expanded={openPanel === "menu"}
+        aria-controls="menu-panel"
+        onClick={() => setOpenPanel(openPanel === "menu" ? null : "menu")}
+      >
+        <span className="hamburger-icon" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </button>
+      <button
+        className="icon-button"
+        type="button"
+        aria-label="Account"
+        aria-expanded={openPanel === "account"}
+        aria-controls="account-panel"
+        onClick={() => setOpenPanel(openPanel === "account" ? null : "account")}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0h14Z" />
+        </svg>
+      </button>
+
+      {openPanel === "menu" && (
+        <button
+          className="drawer-backdrop"
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setOpenPanel(null)}
+        />
+      )}
+
+      <nav
+        className="menu-drawer"
+        id="menu-panel"
+        aria-label="Menu"
+        aria-hidden={openPanel !== "menu"}
+        data-open={openPanel === "menu"}
+      >
+        <p className="popover-title">Navigation</p>
+        <NavLink to="/" end onClick={() => setOpenPanel(null)}>
+          Home
+        </NavLink>
+        {isAuthenticated && (
+          <NavLink to="/saved-medicines" onClick={() => setOpenPanel(null)}>
+            Saved Medicines
+          </NavLink>
+        )}
+      </nav>
+
+      {openPanel === "account" && (
+        <div className="popover account-panel" id="account-panel">
+          <p className="popover-title">Account</p>
+          <button type="button" onClick={() => setOpenPanel(null)}>
+            Sign in
+          </button>
+        </div>
+      )}
+    </header>
+  );
 }
 
-export function App() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [meds, setMeds] = useState<Medication[]>([]);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [mode, setMode] = useState<"register" | "login">("register");
-  const [error, setError] = useState("");
-  useEffect(() => {
-    api<Profile>("/api/me/")
-      .then((value) => {
-        setProfile(value);
-        return api<Medication[]>("/api/medications/");
-      })
-      .then(setMeds)
-      .catch(() => undefined);
-  }, []);
-  async function account(event: FormEvent) {
+function HomePage() {
+  const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    try {
-      const current = await api<Profile>(`/api/auth/${mode}/`, "POST", {
-        email,
-        password,
-      });
-      setProfile(current);
-      setMeds(await api<Medication[]>("/api/medications/"));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Please try again.");
+    const trimmedQuery = query.trim();
+
+    if (trimmedQuery) {
+      setSubmittedQuery(trimmedQuery);
     }
   }
-  async function add(event: FormEvent) {
-    event.preventDefault();
-    try {
-      const medication = await api<Medication>("/api/medications/", "POST", {
-        name,
-      });
-      setMeds([...meds, medication]);
-      setName("");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Please try again.");
-    }
-  }
-  async function saveProfile(event: FormEvent) {
-    event.preventDefault();
-    if (!profile) return;
-    try {
-      setProfile(await api<Profile>("/api/me/", "PATCH", profile));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Please try again.");
-    }
-  }
-  async function remove(id: number) {
-    await api<void>(`/api/medications/${id}/`, "DELETE");
-    setMeds(meds.filter((item) => item.id !== id));
-  }
-  async function signOut() {
-    await api<void>("/api/auth/logout/", "POST");
-    setProfile(null);
-    setMeds([]);
-  }
-  if (!profile)
-    return (
-      <main className="shell">
-        <section className="panel">
-          <p className="eyebrow">Medcheck</p>
-          <h1>
-            {mode === "register"
-              ? "Create your private account"
-              : "Welcome back"}
-          </h1>
-          <form onSubmit={account}>
-            <label>
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-            <label>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
-            </label>
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
-            )}
-            <button>
-              {mode === "register" ? "Create account" : "Sign in"}
-            </button>
-          </form>
-          <button
-            className="link-button"
-            onClick={() => setMode(mode === "register" ? "login" : "register")}
-          >
-            {mode === "register"
-              ? "Already have an account? Sign in"
-              : "Need an account? Create one"}
-          </button>
-        </section>
-      </main>
-    );
+
   return (
-    <main className="shell">
-      <header className="masthead">
-        <p className="eyebrow">Medcheck</p>
-        <button className="link-button" onClick={signOut}>
-          Sign out
+    <section className="search-panel" aria-labelledby="page-title">
+      <h1 id="page-title">MedCheck</h1>
+      <p className="tagline">
+        Your simple starting point for health information.
+      </p>
+
+      <form className="search-form" role="search" onSubmit={handleSubmit}>
+        <label className="sr-only" htmlFor="health-search">
+          Search medications, symptoms, or health topics
+        </label>
+        <input
+          id="health-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search medications, symptoms, or health topics"
+          autoComplete="off"
+        />
+        <button type="submit" aria-label="Search">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m20 20-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+          </svg>
         </button>
-      </header>
-      <section className="intro">
-        <h1>Your health workspace</h1>
-        <p>{profile.email}</p>
-      </section>
-      <div className="workspace">
-        <section className="panel">
-          <h2>Your profile</h2>
-          <form onSubmit={saveProfile}>
-            <label>
-              Date of birth
-              <input
-                type="date"
-                value={profile.date_of_birth ?? ""}
-                onChange={(event) =>
-                  setProfile({
-                    ...profile,
-                    date_of_birth: event.target.value || null,
-                  })
-                }
-              />
-            </label>
-            <label>
-              Gender (optional)
-              <input
-                value={profile.gender}
-                onChange={(event) =>
-                  setProfile({ ...profile, gender: event.target.value })
-                }
-                maxLength={100}
-              />
-            </label>
-            <button>Save profile</button>
-          </form>
-        </section>
-        <section className="panel">
-          <h2>Medications</h2>
-          <form onSubmit={add}>
-            <label>
-              Medication name
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                maxLength={255}
-              />
-            </label>
-            <button>Add medication</button>
-          </form>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-          <ul>
-            {meds.map((medication) => (
-              <li key={medication.id}>
-                {medication.name}
-                <button
-                  className="link-button"
-                  onClick={() => remove(medication.id)}
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+      </form>
+
+      <p className="search-status" role="status" aria-live="polite">
+        {submittedQuery ? `Searching for “${submittedQuery}”` : ""}
+      </p>
+    </section>
+  );
+}
+
+function SavedMedicinesPage({ medicines }: { medicines: SavedMedicine[] }) {
+  return (
+    <section className="saved-medicines" aria-labelledby="saved-page-title">
+      <div className="saved-medicines-heading">
+        <p className="section-label">Your library</p>
+        <h1 id="saved-page-title">Saved Medicines</h1>
+        <p>Medicines you save will be collected here for quick reference.</p>
       </div>
+
+      {medicines.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-state-icon" aria-hidden="true">
+            +
+          </span>
+          <h2>No saved medicines yet.</h2>
+          <p>Return Home to search when you are ready to build your list.</p>
+          <NavLink className="home-link" to="/">
+            Return Home
+          </NavLink>
+        </div>
+      ) : (
+        <ul className="medicine-list">
+          {medicines.map((medicine) => (
+            <li key={medicine.id}>{medicine.name}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+export function App({
+  isAuthenticated = false,
+  savedMedicines = [],
+}: AppProps) {
+  return (
+    <main className="app-shell">
+      <Navigation isAuthenticated={isAuthenticated} />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/saved-medicines"
+          element={
+            isAuthenticated ? (
+              <SavedMedicinesPage medicines={savedMedicines} />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+      </Routes>
     </main>
   );
 }
