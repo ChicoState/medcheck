@@ -15,6 +15,8 @@ a backend API, or a medicine domain model.
 
 - `/` renders the existing MedCheck search prototype.
 - `/saved-medicines` renders the Saved Medicines page.
+- After account integration, `/my-medication` is the primary route and
+  `/saved-medicines` redirects to it. The menu label is My Medication.
 - The hamburger button opens a full-height drawer that slides in from the left.
 - The drawer begins beneath the hamburger control and places a backdrop over
   the remaining page.
