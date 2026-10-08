@@ -58,7 +58,10 @@ test("opens the sliding navigation drawer and account panel", async ({
   await page.goto("/");
 
   const menuButton = page.getByRole("button", { name: "Open menu" });
-  const accountButton = page.getByRole("button", { name: "Account" });
+  const accountButton = page.getByRole("button", {
+    name: "Account",
+    exact: true,
+  });
   const drawer = page.getByRole("navigation", { name: "Menu" });
 
   await expect(drawer).toBeHidden();

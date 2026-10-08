@@ -15,7 +15,7 @@
 ## 2. Connectivity and Application Shape
 
 - **Connectivity model:** Single-user web-enabled.
-- **Accounts and authentication:** One account per user; authentication is required. Choose a maintained Django-compatible authentication approach during implementation.
+- **Accounts and authentication:** One account per user; authentication is required. The first implementation uses Django's maintained built-in session authentication with an email-based account API. The contract is documented in `docs/specs/user-accounts.md`.
 - **Backend required:** Yes: a single Django application exposes the API and owns account data.
 - **Cross-device persistence:** Hosted PostgreSQL is the source of truth.
 - **Interaction between accounts:** None planned; user data remains private to its owner.
@@ -174,4 +174,4 @@ These are developer-workstation prerequisites that will not be supplied by the p
 
 - **Assumptions:** The application handles private personal data, requires normal account authentication, does not currently require uploads, collaboration, or offline-first synchronization, and will use one deployable Django backend rather than microservices.
 - **Decisions still requiring an external account, credential, certificate, or organizational approval:** Hosting provider and container registry; PostgreSQL provider; production-domain ownership.
-- **Items to confirm before implementation begins:** Primary user workflow and data model, authentication provider/method, privacy and retention requirements, exact supported browser versions, hosting and registry providers, and coverage threshold.
+- **Items to confirm before implementation begins:** Primary user workflow and data model, privacy and retention requirements, exact supported browser versions, hosting and registry providers, and coverage threshold. Authentication provider/method is resolved for the initial account slice by `docs/specs/user-accounts.md`.

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { Account, AccountError, accountAction, currentAccount } from "./auth";
 
 type OpenPanel = "menu" | "account" | null;
 
@@ -9,13 +10,70 @@ export type SavedMedicine = {
 };
 
 type AppProps = {
-  isAuthenticated?: boolean;
   savedMedicines?: SavedMedicine[];
 };
 
-function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
+function Navigation({
+  account,
+  onAccountChange,
+  ready,
+}: {
+  account: Account | null;
+  onAccountChange: (account: Account | null) => void;
+  ready: boolean;
+}) {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  const [accountForm, setAccountForm] = useState<"login" | "register" | null>(
+    null,
+  );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  async function submitAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!accountForm || busy) return;
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form).entries()) as Record<
+      string,
+      string
+    >;
+    setBusy(true);
+    setErrors({});
+    try {
+      const nextAccount = await accountAction(accountForm, values);
+      onAccountChange(nextAccount);
+      setOpenPanel(null);
+      setAccountForm(null);
+    } catch (error) {
+      setErrors(
+        error instanceof AccountError
+          ? error.errors
+          : {
+              form:
+                error instanceof Error ? error.message : "Please try again.",
+            },
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function signOut() {
+    setBusy(true);
+    setErrors({});
+    try {
+      await accountAction("logout");
+      onAccountChange(null);
+      setOpenPanel(null);
+    } catch (error) {
+      setErrors({
+        form: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (openPanel !== "menu") {
@@ -60,6 +118,7 @@ function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
         className="icon-button"
         type="button"
         aria-label="Account"
+        disabled={!ready}
         aria-expanded={openPanel === "account"}
         aria-controls="account-panel"
         onClick={() => setOpenPanel(openPanel === "account" ? null : "account")}
@@ -89,9 +148,9 @@ function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
         <NavLink to="/" end onClick={() => setOpenPanel(null)}>
           Home
         </NavLink>
-        {isAuthenticated && (
-          <NavLink to="/saved-medicines" onClick={() => setOpenPanel(null)}>
-            Saved Medicines
+        {account && (
+          <NavLink to="/my-medication" onClick={() => setOpenPanel(null)}>
+            My Medication
           </NavLink>
         )}
       </nav>
@@ -99,9 +158,102 @@ function Navigation({ isAuthenticated }: { isAuthenticated: boolean }) {
       {openPanel === "account" && (
         <div className="popover account-panel" id="account-panel">
           <p className="popover-title">Account</p>
-          <button type="button" onClick={() => setOpenPanel(null)}>
-            Sign in
-          </button>
+          {account ? (
+            <>
+              <p className="account-email">{account.email}</p>
+              {errors.form && (
+                <p className="account-error" role="alert">
+                  {errors.form}
+                </p>
+              )}
+              <button type="button" disabled={busy} onClick={signOut}>
+                Sign out
+              </button>
+            </>
+          ) : accountForm ? (
+            <form className="account-form" onSubmit={submitAccount}>
+              <h2>{accountForm === "login" ? "Sign in" : "Create account"}</h2>
+              {errors.form && (
+                <p className="account-error" role="alert">
+                  {errors.form}
+                </p>
+              )}
+              <label htmlFor="account-email">Email</label>
+              <input
+                id="account-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+              />
+              {errors.email && (
+                <p className="account-error" role="alert">
+                  {errors.email}
+                </p>
+              )}
+              <label htmlFor="account-password">Password</label>
+              <input
+                id="account-password"
+                name="password"
+                type="password"
+                autoComplete={
+                  accountForm === "login" ? "current-password" : "new-password"
+                }
+                required
+              />
+              {errors.password && (
+                <p className="account-error" role="alert">
+                  {errors.password}
+                </p>
+              )}
+              {accountForm === "register" && (
+                <>
+                  <label htmlFor="account-confirm">Confirm password</label>
+                  <input
+                    id="account-confirm"
+                    name="password_confirmation"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                  />
+                  {errors.password_confirmation && (
+                    <p className="account-error" role="alert">
+                      {errors.password_confirmation}
+                    </p>
+                  )}
+                </>
+              )}
+              <button className="account-submit" type="submit" disabled={busy}>
+                {busy
+                  ? "Please wait…"
+                  : accountForm === "login"
+                    ? "Sign in"
+                    : "Create account"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountForm(
+                    accountForm === "login" ? "register" : "login",
+                  );
+                  setErrors({});
+                }}
+              >
+                {accountForm === "login"
+                  ? "Create account"
+                  : "Already have an account? Sign in"}
+              </button>
+            </form>
+          ) : (
+            <>
+              <button type="button" onClick={() => setAccountForm("login")}>
+                Sign in
+              </button>
+              <button type="button" onClick={() => setAccountForm("register")}>
+                Create account
+              </button>
+            </>
+          )}
         </div>
       )}
     </header>
@@ -159,7 +311,7 @@ function SavedMedicinesPage({ medicines }: { medicines: SavedMedicine[] }) {
     <section className="saved-medicines" aria-labelledby="saved-page-title">
       <div className="saved-medicines-heading">
         <p className="section-label">Your library</p>
-        <h1 id="saved-page-title">Saved Medicines</h1>
+        <h1 id="saved-page-title">My Medication</h1>
         <p>Medicines you save will be collected here for quick reference.</p>
       </div>
 
@@ -185,24 +337,50 @@ function SavedMedicinesPage({ medicines }: { medicines: SavedMedicine[] }) {
   );
 }
 
-export function App({
-  isAuthenticated = false,
-  savedMedicines = [],
-}: AppProps) {
+export function App({ savedMedicines = [] }: AppProps) {
+  const [account, setAccount] = useState<Account | null>(null);
+  const [accountReady, setAccountReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    currentAccount().then(
+      (user) => {
+        if (active) {
+          setAccount(user);
+          setAccountReady(true);
+        }
+      },
+      () => {
+        if (active) setAccountReady(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <main className="app-shell">
-      <Navigation isAuthenticated={isAuthenticated} />
+      <Navigation
+        account={account}
+        onAccountChange={setAccount}
+        ready={accountReady}
+      />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route
-          path="/saved-medicines"
+          path="/my-medication"
           element={
-            isAuthenticated ? (
+            !accountReady ? null : account ? (
               <SavedMedicinesPage medicines={savedMedicines} />
             ) : (
               <Navigate to="/" replace />
             )
           }
+        />
+        <Route
+          path="/saved-medicines"
+          element={<Navigate to="/my-medication" replace />}
         />
       </Routes>
     </main>

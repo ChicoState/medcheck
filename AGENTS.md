@@ -4,10 +4,10 @@
 
 `infrastructure_plan.md` is the source of truth for architectural decisions. The
 web tooling, MedCheck landing-page prototype, Playwright tests, Docker
-foundation, and minimal Django project scaffold are in place. The landing page
-only echoes a local search term; no medical search, production API, domain
-model, authentication, or persistence workflow exists. Do not expand product
-behavior while performing infrastructure work.
+foundation, minimal Django project scaffold, and initial session-based account
+API are in place. The landing page only echoes a local search term; no medical
+search, domain model, or saved-medicine persistence workflow exists. Do not
+expand product behavior while performing infrastructure work.
 
 ## Repository map
 
@@ -16,10 +16,12 @@ behavior while performing infrastructure work.
 - `docker/backend.Dockerfile`, `docker-compose.yml`, and `.dockerignore` —
   Docker tooling and local PostgreSQL only.
 - `scripts/docker-smoke.sh` — infrastructure-owned smoke test.
-- `backend/` — Django project scaffold, Python dependency/tool configuration, and
-  infrastructure-only tests; no API or business application package exists yet.
+- `scripts/dev.sh` — starts local Django and Vite together for account UI work.
+- `backend/` — Django project scaffold, account API, Python dependency/tool
+  configuration, and tests; no medical business application package exists yet.
 - `web/` — React/Vite entrypoint, dependency/tool configuration, and
-  the landing-page prototype with infrastructure and Playwright tests.
+  the landing-page prototype, account forms, and My Medication navigation with
+  infrastructure and Playwright tests. Vite proxies `/api` to Django on port 8000.
 - `.github/workflows/pr-checks.yml` — secret, backend, web, build, and browser
   pull-request quality checks.
 - `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
@@ -62,3 +64,9 @@ git diff --check
 
 Keep CI commands equivalent once workflows are added. Update README and this
 file whenever paths, setup commands, services, or verification steps change.
+
+For account UI development, run `./scripts/dev.sh`. It loads local environment
+defaults, applies migrations, and stops both local servers on Ctrl+C. The
+current scaffold uses local SQLite; do not use real patient data.
+`MEDCHECK_LIVE_AUTH=1 pnpm test:e2e` additionally verifies accounts against a
+running Django server with an isolated test database on port 8000.
