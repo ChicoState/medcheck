@@ -45,6 +45,10 @@ jobs:
         run: uv run pyright
       - name: Run infrastructure tests with coverage
         run: uv run pytest --cov=tests --cov-report=xml
+        env:
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+      - name: Scan Python infrastructure
+        run: uv run bandit --quiet --recursive tests          
       - name: Scan Python infrastructure
         run: uv run bandit --quiet --recursive tests
       - name: Upload backend coverage
@@ -54,10 +58,6 @@ jobs:
           name: backend-coverage
           path: backend/coverage.xml
           if-no-files-found: ignore
-      - name: Run infrastructure tests with coverage
-        run: uv run pytest --cov=tests --cov-report=xml
-        env:
-          DJANGO_SECRET_KEY: test-secret-key-for-ci
 
   web:
     name: Web tooling
