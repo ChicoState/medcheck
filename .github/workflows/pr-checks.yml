@@ -47,10 +47,8 @@ jobs:
         run: uv run pytest --cov=tests --cov-report=xml
         env:
           DJANGO_SECRET_KEY: test-secret-key-for-ci
-      - name: Scan Python infrastructure
-        run: uv run bandit --quiet --recursive tests          
-      - name: Scan Python infrastructure
-        run: uv run bandit --quiet --recursive tests
+      - name: Scan Python application code
+        run: uv run bandit --quiet --recursive accounts config
       - name: Upload backend coverage
         if: always()
         uses: actions/upload-artifact@v4

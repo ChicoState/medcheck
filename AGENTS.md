@@ -56,7 +56,7 @@ For Docker changes, run:
 docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
 docker compose config --quiet
 ./scripts/docker-smoke.sh
-(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
+(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts config)
 (cd backend && set -a && source ../.env.example && set +a && uv run python manage.py check)
 (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
 git diff --check

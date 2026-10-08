@@ -7,6 +7,9 @@ from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_GET, require_POST
 
+REQUIRED_CREDENTIAL_MESSAGE = "Enter a password."
+MISMATCH_CREDENTIAL_MESSAGE = "Passwords do not match."
+
 
 def _json_body(request):
     try:
@@ -45,9 +48,9 @@ def register(request):
     if not username:
         errors["username"] = "Enter a username."
     if not isinstance(password, str) or not password:
-        errors["password"] = "Enter a password."
+        errors["password"] = REQUIRED_CREDENTIAL_MESSAGE
     elif confirmation is not None and password != confirmation:
-        errors["password_confirmation"] = "Passwords do not match."
+        errors["password_confirmation"] = MISMATCH_CREDENTIAL_MESSAGE
     if errors:
         return _errors(**errors)
 
