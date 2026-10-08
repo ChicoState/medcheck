@@ -55,9 +55,9 @@ jobs:
           path: backend/coverage.xml
           if-no-files-found: ignore
       - name: Run infrastructure tests with coverage
+        run: uv run pytest --cov=tests --cov-report=xml
         env:
           DJANGO_SECRET_KEY: test-secret-key-for-ci
-        run: uv run pytest --cov=tests --cov-report=xml
 
   web:
     name: Web tooling
