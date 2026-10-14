@@ -63,6 +63,67 @@ input {
 
 .account-panel {
   right: 0;
+  width: min(21rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+}
+
+.account-email {
+  overflow-wrap: anywhere;
+  margin: 0.25rem 0;
+}
+
+.account-form {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.account-form h2 {
+  margin: 0.4rem 0 0.6rem;
+  font-size: 1.25rem;
+}
+
+.account-form label {
+  margin-top: 0.3rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.account-form input {
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid #aebfb3;
+  border-radius: 0.4rem;
+  background: white;
+  color: #1d332b;
+}
+
+.account-form input:focus-visible {
+  outline: 3px solid #9bc4a7;
+  outline-offset: 2px;
+}
+
+.account-panel .account-submit {
+  margin-top: 0.65rem;
+  background: #2f6b4f;
+  color: white;
+  text-align: center;
+}
+
+.account-panel .account-submit:hover,
+.account-panel .account-submit:focus-visible {
+  background: #24563f;
+}
+
+.account-panel button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.account-error {
+  margin: 0.2rem 0;
+  color: #9b3028;
+  font-size: 0.875rem;
 }
 
 .drawer-backdrop {

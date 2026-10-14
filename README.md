@@ -4,9 +4,10 @@
 
 The repository has a minimal Django scaffold, a React/Vite landing-page
 prototype, a local PostgreSQL service, and pull-request checks. The landing page
-accepts a local search term but does not query medical information. No
-production API, domain models, authentication, or persistent product workflow
-exists yet.
+accepts a local search term but does not query medical information. The initial
+account API provides session-based registration, login, logout, CSRF protection,
+and current-user status; no medical domain models or persistent product
+workflow exists yet.
 
 ## Repository map
 
@@ -16,8 +17,8 @@ exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — minimal Django project scaffold, Python/Django tooling, locked
-  dependencies, and infrastructure probes; no API or business code exists yet.
+- `backend/` — Django project scaffold, account API, Python/Django tooling,
+  locked dependencies, and tests; no medical business code exists yet.
 - `web/` — React/Vite landing-page prototype, locked dependencies,
   infrastructure probes, and Playwright browser tests.
 - `.github/workflows/pr-checks.yml` — secret scanning plus backend and web
@@ -71,11 +72,21 @@ exists yet.
    docker compose up --detach postgres
    ```
 
-6. Run the available backend, web, and browser checks, then clean up the Docker
+6. Start the local application and account service together:
+
+   ```bash
+   ./scripts/dev.sh
+   ```
+
+   Open `http://127.0.0.1:5173`. Press Ctrl+C in that terminal to stop both
+   the Django API and Vite web server. The script runs Django migrations using
+   `.env` when available, or the safe values in `.env.example`.
+
+7. Run the available backend, web, and browser checks, then clean up the Docker
    foundation:
 
    ```bash
-   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
+   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts config)
    (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
    ./scripts/docker-smoke.sh
    docker compose down --volumes
@@ -91,6 +102,16 @@ provider is selected.
 
 ## Troubleshooting
 
+For local account flows, run `./scripts/dev.sh`, then open the Vite URL. Choose
+Account, then Sign in or Create account. My Medication appears in the menu
+after authentication and the session survives a reload. The current Django
+development scaffold stores accounts in local SQLite. Production PostgreSQL
+configuration remains pending.
+
+Browser UI tests use controlled API responses. To also run the real account
+workflow against a Django server using an isolated test database on port 8000,
+run `cd web && MEDCHECK_LIVE_AUTH=1 pnpm test:e2e`.
+
 - **Docker socket permission denied:** ensure Docker Desktop/Engine is running
   and that your user has permission to use the Docker daemon.
 - **Port 5432 is occupied:** set `POSTGRES_PORT=127.0.0.1:5433` in `.env` and
@@ -105,3 +126,6 @@ provider is selected.
   using that installation.
 - **`uv` or `pnpm` is missing:** install uv or run `corepack enable` under Node
   22, then rerun the locked install command.
+- **`./scripts/dev.sh` reports a missing command:** run the dependency
+  installation commands from Getting Started. On Apple Silicon Homebrew setups,
+  the script automatically adds Node 22's `pnpm` location to its PATH.
