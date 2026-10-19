@@ -1,26 +1,26 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import {
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom";
 import { Account, AccountError, accountAction, currentAccount } from "./auth";
+import { DetailPage, SavedPage, SearchPage } from "./MedicationPages";
 
 type OpenPanel = "menu" | "account" | null;
-
-export type SavedMedicine = {
-  id: string;
-  name: string;
-};
-
-type AppProps = {
-  savedMedicines?: SavedMedicine[];
-};
 
 function Navigation({
   account,
   onAccountChange,
   ready,
+  signInRequest,
 }: {
   account: Account | null;
   onAccountChange: (account: Account | null) => void;
   ready: boolean;
+  signInRequest: number;
 }) {
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [accountForm, setAccountForm] = useState<"login" | "register" | null>(
@@ -29,6 +29,13 @@ function Navigation({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (signInRequest) {
+      setOpenPanel("account");
+      setAccountForm("login");
+    }
+  }, [signInRequest]);
 
   async function submitAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -262,14 +269,14 @@ function Navigation({
 
 function HomePage() {
   const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
+  const navigate = useNavigate();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedQuery = query.trim();
 
     if (trimmedQuery) {
-      setSubmittedQuery(trimmedQuery);
+      navigate(`/search?q=${encodeURIComponent(trimmedQuery)}`);
     }
   }
 
@@ -282,14 +289,14 @@ function HomePage() {
 
       <form className="search-form" role="search" onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor="health-search">
-          Search medications, symptoms, or health topics
+          Search medications by brand or generic name
         </label>
         <input
           id="health-search"
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search medications, symptoms, or health topics"
+          placeholder="Search a medication name"
           autoComplete="off"
         />
         <button type="submit" aria-label="Search">
@@ -299,47 +306,17 @@ function HomePage() {
         </button>
       </form>
 
-      <p className="search-status" role="status" aria-live="polite">
-        {submittedQuery ? `Searching for “${submittedQuery}”` : ""}
+      <p className="search-status">
+        Drug-label information from openFDA. Not personal medical advice.
       </p>
     </section>
   );
 }
 
-function SavedMedicinesPage({ medicines }: { medicines: SavedMedicine[] }) {
-  return (
-    <section className="saved-medicines" aria-labelledby="saved-page-title">
-      <div className="saved-medicines-heading">
-        <p className="section-label">Your library</p>
-        <h1 id="saved-page-title">My Medication</h1>
-        <p>Medicines you save will be collected here for quick reference.</p>
-      </div>
-
-      {medicines.length === 0 ? (
-        <div className="empty-state">
-          <span className="empty-state-icon" aria-hidden="true">
-            +
-          </span>
-          <h2>No saved medicines yet.</h2>
-          <p>Return Home to search when you are ready to build your list.</p>
-          <NavLink className="home-link" to="/">
-            Return Home
-          </NavLink>
-        </div>
-      ) : (
-        <ul className="medicine-list">
-          {medicines.map((medicine) => (
-            <li key={medicine.id}>{medicine.name}</li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-export function App({ savedMedicines = [] }: AppProps) {
+export function App() {
   const [account, setAccount] = useState<Account | null>(null);
   const [accountReady, setAccountReady] = useState(false);
+  const [signInRequest, setSignInRequest] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -365,14 +342,25 @@ export function App({ savedMedicines = [] }: AppProps) {
         account={account}
         onAccountChange={setAccount}
         ready={accountReady}
+        signInRequest={signInRequest}
       />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/search" element={<SearchPage />} />
+        <Route
+          path="/medications/:provider/:externalId"
+          element={
+            <DetailPage
+              account={account}
+              onSignIn={() => setSignInRequest((n) => n + 1)}
+            />
+          }
+        />
         <Route
           path="/my-medication"
           element={
             !accountReady ? null : account ? (
-              <SavedMedicinesPage medicines={savedMedicines} />
+              <SavedPage />
             ) : (
               <Navigate to="/" replace />
             )
