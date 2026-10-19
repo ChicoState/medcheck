@@ -2,12 +2,10 @@
 
 ## Status
 
-The repository has a minimal Django scaffold, a React/Vite landing-page
-prototype, a local PostgreSQL service, and pull-request checks. The landing page
-accepts a local search term but does not query medical information. The initial
-account API provides session-based registration, login, logout, CSRF protection,
-and current-user status; no medical domain models or persistent product
-workflow exists yet.
+MedCheck offers live openFDA drug-label search and detail pages. Signed-in users
+can save product labels to a private My Medication library and remove them later.
+The Django account API uses session authentication and CSRF protection. This is
+a reference tool, not personal medical advice or a medication regimen tracker.
 
 ## Repository map
 
@@ -17,10 +15,9 @@ workflow exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — Django project scaffold, account API, Python/Django tooling,
-  locked dependencies, and tests; no medical business code exists yet.
-- `web/` — React/Vite landing-page prototype, locked dependencies,
-  infrastructure probes, and Playwright browser tests.
+- `backend/` — Django account and medication APIs, openFDA adapter, migrations,
+  locked dependencies, and tests.
+- `web/` — React/Vite search, detail, and saved-library pages with browser tests.
 - `.github/workflows/pr-checks.yml` — secret scanning plus backend and web
   quality checks, including the web build and Playwright tests.
 - `.github/dependabot.yml` — weekly dependency-update configuration.
@@ -28,7 +25,6 @@ workflow exists yet.
   truth for future configuration.
 - `.agents/skills/` — local agent skills.
 - `docs/specs/` — implementation specifications and scope boundaries.
-- Production API and domain application packages — not created yet.
 
 ## Getting Started
 
@@ -72,7 +68,7 @@ workflow exists yet.
    docker compose up --detach postgres
    ```
 
-6. Start the local application and account service together:
+6. Start the local application:
 
    ```bash
    ./scripts/dev.sh
@@ -82,11 +78,17 @@ workflow exists yet.
    the Django API and Vite web server. The script runs Django migrations using
    `.env` when available, or the safe values in `.env.example`.
 
+   The default database is local SQLite. To use the local PostgreSQL service,
+   set `DATABASE_URL=postgresql://medcheck:medcheck_local_only@127.0.0.1:5432/medcheck`
+   in your untracked `.env` before starting the script. Set `OPENFDA_API_KEY`
+   there as well for live provider use; a key is optional for a limited local
+   trial but required before public deployment. Do not commit these values.
+
 7. Run the available backend, web, and browser checks, then clean up the Docker
    foundation:
 
    ```bash
-   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts config)
+   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=accounts --cov=medications && uv run bandit --quiet --recursive accounts config medications)
    (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
    ./scripts/docker-smoke.sh
    docker compose down --volumes
@@ -96,17 +98,28 @@ The local database is exposed only on `127.0.0.1:5432` by default. Change
 `POSTGRES_PORT` in an untracked `.env` if that port is occupied. Reset local
 database data with `docker compose down --volumes`.
 
-Playwright currently verifies the landing-page layout and local search-form
-behavior. A production release workflow remains deferred until a hosting
+Playwright verifies the search, detail, and saved-library journey with mocked
+provider responses. The backend CI job runs against PostgreSQL. Saved labels
+are personal health-related data; use only test data locally, and delete saved
+relationships from My Medication when no longer needed. A production release
+workflow remains deferred until a hosting
 provider is selected.
+
+For public deployment, configure managed PostgreSQL with a TLS-enabled
+`DATABASE_URL` (for example, `?sslmode=require`), a server-side
+`OPENFDA_API_KEY`, and a shared Django cache for search throttling. Ensure any
+reverse proxy or tracing system redacts the `q` parameter from access logs;
+the local browser history still contains `/search?q=...`. The development
+server suppresses its access log for this reason. Production host, backup,
+retention, and monitoring settings must be reviewed before launch.
 
 ## Troubleshooting
 
-For local account flows, run `./scripts/dev.sh`, then open the Vite URL. Choose
-Account, then Sign in or Create account. My Medication appears in the menu
-after authentication and the session survives a reload. The current Django
-development scaffold stores accounts in local SQLite. Production PostgreSQL
-configuration remains pending.
+For local medication flows, run `./scripts/dev.sh`, search a medication name,
+open an FDA product label, and sign in to save it. My Medication appears in the
+menu after authentication and the session survives a reload. Product labels
+can represent different manufacturers and formulations of similarly named
+medications; always check the source and consult a healthcare professional.
 
 Browser UI tests use controlled API responses. To also run the real account
 workflow against a Django server using an isolated test database on port 8000,

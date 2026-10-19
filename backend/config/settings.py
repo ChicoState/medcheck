@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "accounts",
+    "medications",
 ]
 
 MIDDLEWARE = [
@@ -79,6 +81,37 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
+}
+
+if database_url := os.environ.get("DATABASE_URL"):
+    parsed = urlparse(database_url)
+    if (
+        parsed.scheme not in ("postgres", "postgresql")
+        or not parsed.hostname
+        or not parsed.path[1:]
+    ):
+        raise ValueError("DATABASE_URL must be a PostgreSQL connection URL")
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(parsed.path[1:]),
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname,
+        "PORT": parsed.port or 5432,
+    }
+    sslmode = parse_qs(parsed.query).get("sslmode", [None])[0]
+    if sslmode:
+        if sslmode not in ("require", "verify-ca", "verify-full"):
+            raise ValueError("DATABASE_URL sslmode must require TLS")
+        DATABASES["default"]["OPTIONS"] = {"sslmode": sslmode}
+
+# Search terms are carried in URLs; suppress Django's development access log,
+# which otherwise prints the raw request path (including the q parameter).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"null": {"class": "logging.NullHandler"}},
+    "loggers": {"django.server": {"handlers": ["null"], "propagate": False}},
 }
 
 

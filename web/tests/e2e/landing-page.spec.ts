@@ -5,7 +5,7 @@ test("centers MedCheck above the search bar", async ({ page }) => {
 
   const heading = page.getByRole("heading", { name: "MedCheck" });
   const searchbox = page.getByRole("searchbox", {
-    name: "Search medications, symptoms, or health topics",
+    name: "Search medications by brand or generic name",
   });
   const searchForm = page.getByRole("search");
 
@@ -32,15 +32,24 @@ test("centers MedCheck above the search bar", async ({ page }) => {
   ).toBeLessThan(2);
 });
 
-test("shows the submitted search term", async ({ page }) => {
+test("opens search results for the submitted term", async ({ page }) => {
+  await page.route("**/api/medications/?**", (route) =>
+    route.fulfill({
+      json: {
+        data: [],
+        pagination: { page: 1, pageSize: 20, hasNextPage: false },
+      },
+    }),
+  );
   await page.goto("/");
 
   const searchbox = page.getByRole("searchbox");
   await searchbox.fill("ibuprofen");
   await searchbox.press("Enter");
 
+  await expect(page).toHaveURL(/\/search\?q=ibuprofen/);
   await expect(
-    page.getByRole("status").filter({ hasText: "Searching for “ibuprofen”" }),
+    page.getByRole("status").filter({ hasText: "No labels found" }),
   ).toBeVisible();
 });
 
@@ -49,7 +58,7 @@ test("does not submit an empty search", async ({ page }) => {
 
   await page.getByRole("searchbox").press("Enter");
 
-  await expect(page.getByRole("status")).toHaveText("");
+  await expect(page).toHaveURL("/");
 });
 
 test("opens the sliding navigation drawer and account panel", async ({

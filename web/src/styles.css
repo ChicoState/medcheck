@@ -462,6 +462,116 @@ h1 {
   font-weight: 650;
 }
 
+.content-page {
+  width: min(100%, 52rem);
+  align-self: start;
+  padding: 6rem 0 3rem;
+}
+
+.content-page h1 {
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+}
+.content-page .search-form {
+  margin-top: 2rem;
+}
+.content-page .search-form button {
+  width: auto;
+  padding: 0 1.1rem;
+  font-weight: 650;
+}
+.page-note,
+.medicine-meta {
+  color: #60716b;
+  line-height: 1.6;
+}
+.medicine-meta {
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+.medicine-list a,
+.detail-actions a,
+.label-metadata a {
+  color: #24563f;
+}
+.medicine-list a {
+  font-size: 1.15rem;
+}
+.medicine-list button,
+.detail-actions button,
+.pagination button {
+  border: 1px solid #6c9a7d;
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  background: #fffefa;
+  color: #24563f;
+  cursor: pointer;
+}
+.medicine-list button:disabled,
+.detail-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.page-error {
+  color: #9b3028;
+}
+.saved-badge {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #24563f;
+  font-weight: 700;
+}
+.pagination {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.detail-page > .home-link {
+  display: inline-block;
+  margin: 0 0 2rem;
+}
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.medical-notice {
+  padding: 1rem;
+  border-left: 4px solid #6c9a7d;
+  background: #edf3ee;
+  line-height: 1.6;
+}
+.label-metadata {
+  display: grid;
+  gap: 0.65rem;
+  margin: 2rem 0;
+}
+.label-metadata div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.label-metadata dt {
+  min-width: 10rem;
+  font-weight: 700;
+}
+.label-metadata dd {
+  margin: 0;
+}
+.label-section {
+  border-top: 1px solid #c7d2ca;
+  padding: 1.25rem 0;
+}
+.label-section h2 {
+  font-size: 1.25rem;
+}
+.label-section p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
