@@ -57,10 +57,17 @@ For Docker changes, run:
 docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
 docker compose config --quiet
 ./scripts/docker-smoke.sh
-(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
-(cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test)
+(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts config)
+(cd backend && set -a && source ../.env.example && set +a && uv run python manage.py check)
+(cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
 git diff --check
 ```
 
 Keep CI commands equivalent once workflows are added. Update README and this
 file whenever paths, setup commands, services, or verification steps change.
+
+For account UI development, run `./scripts/dev.sh`. It loads local environment
+defaults, applies migrations, and stops both local servers on Ctrl+C. The
+current scaffold uses local SQLite; do not use real patient data.
+`MEDCHECK_LIVE_AUTH=1 pnpm test:e2e` additionally verifies accounts against a
+running Django server with an isolated test database on port 8000.

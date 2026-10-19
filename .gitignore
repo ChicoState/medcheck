@@ -13,6 +13,7 @@ __pycache__/
 .coverage
 coverage.xml
 htmlcov/
+backend/db.sqlite3
 
 # JavaScript
 node_modules/

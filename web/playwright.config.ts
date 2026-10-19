@@ -1,4 +1,13 @@
 import { defineConfig } from "@playwright/test";
 
-// No web server is defined until the application entrypoint exists.
-export default defineConfig({ testDir: "tests/e2e" });
+export default defineConfig({
+  testDir: "tests/e2e",
+  use: {
+    baseURL: "http://127.0.0.1:5173",
+  },
+  webServer: {
+    command: "./node_modules/.bin/vite --host 127.0.0.1",
+    url: "http://127.0.0.1:5173",
+    reuseExistingServer: true,
+  },
+});
