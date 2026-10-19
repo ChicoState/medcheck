@@ -2,9 +2,9 @@
 
 ## Status
 
-The repository has minimal Django and React/Vite application scaffolds, a local
-PostgreSQL service, and pull-request checks. No production API, domain models,
-or product UI exists yet.
+Medcheck provides a private account where a user can save medication names,
+dosages, and frequencies. Records are stored in PostgreSQL and remain available
+after signing out and signing back in.
 
 ## Repository map
 
@@ -14,10 +14,12 @@ or product UI exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — minimal Django project scaffold, Python/Django tooling, locked
-  dependencies, and infrastructure probes; no API or business code exists yet.
-- `web/` — React/Vite entrypoint, locked dependencies, infrastructure probes, and
-  the initial application shell; no product page or business UI exists yet.
+- `backend/medications/` — Django medication model, JSON account/session API,
+  migration, and owner-scoped persistence.
+- `backend/tests/` — Django integration tests for authentication, persistence,
+  and account isolation.
+- `web/src/` — React account and medication-list interface plus its API client.
+- `docs/specs/account-medications.md` — the account-medication contract.
 - `.github/workflows/pr-checks.yml` — web-only infrastructure quality checks.
 - `.github/dependabot.yml` — weekly dependency-update configuration.
 - `infrastructure_plan.md` — the approved infrastructure plan and source of
@@ -57,7 +59,20 @@ or product UI exists yet.
    docker compose up --detach postgres
    ```
 
-6. Run the available infrastructure checks and clean up the Docker foundation:
+6. Apply local database migrations, then start the backend and browser client in
+   separate terminals. The `set -a` commands export the non-secret local values
+   from `.env` for each process.
+
+   ```bash
+   (cd backend && set -a && source ../.env && set +a && uv run manage.py migrate)
+   (cd backend && set -a && source ../.env && set +a && uv run manage.py runserver)
+   (cd web && pnpm dev)
+   ```
+
+7. Open `http://127.0.0.1:5173`, create an account, save a medication, sign out,
+   then sign back in to confirm the record persists.
+
+8. Run checks and clean up the local service when finished:
 
    ```bash
    (cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests)
@@ -70,9 +85,9 @@ The local database is exposed only on `127.0.0.1:5432` by default. Change
 `POSTGRES_PORT` in an untracked `.env` if that port is occupied. Reset local
 database data with `docker compose down --volumes`.
 
-Playwright end-to-end tests are intentionally deferred until the first product
-workflow exists. A production release workflow is also deferred until a hosting
-provider is selected.
+The application uses Django session cookies and CSRF protection; do not place
+authentication tokens in browser storage. A production release workflow remains
+deferred until a hosting provider is selected.
 
 ## Troubleshooting
 

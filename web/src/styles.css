@@ -57,21 +57,6 @@ body::before {
   text-transform: uppercase;
 }
 
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #557267;
-  font-size: 0.875rem;
-}
-
-.status span {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: #4d8b69;
-}
-
 .intro {
   max-width: 48rem;
   padding: clamp(5rem, 15vw, 10rem) 0 4rem;
@@ -95,23 +80,126 @@ body::before {
   line-height: 1.6;
 }
 
-.next-step {
+.account-card,
+.workspace {
   max-width: 36rem;
   border-top: 3px solid #92b49b;
   padding: 1.5rem 0 0;
 }
 
-.next-step h2 {
+.account-card h2,
+.workspace h2 {
   margin: 0.75rem 0;
   color: #203c34;
   font-size: 1.25rem;
   letter-spacing: -0.02em;
 }
 
-.next-step p:last-child {
-  margin: 0;
+form {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  color: #314a40;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  border: 1px solid #aeb9b2;
+  border-radius: 0.35rem;
+  background: #fffdfa;
+  padding: 0.7rem 0.75rem;
+  color: #1f2a27;
+  font: inherit;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 3px solid #92b49b;
+  outline-offset: 2px;
+}
+
+button {
+  width: fit-content;
+  border: 0;
+  border-radius: 0.35rem;
+  background: #203c34;
+  padding: 0.7rem 1rem;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.text-button {
+  margin-top: 1rem;
+  background: transparent;
+  padding: 0;
+  color: #315e4d;
+  text-decoration: underline;
+}
+
+.message {
+  max-width: 36rem;
+  margin: 0 0 1.25rem;
+  border-left: 3px solid #4d8b69;
+  padding: 0.7rem 0.9rem;
+  background: #e9f1ea;
+  color: #244635;
+}
+
+.message.error {
+  border-color: #a14639;
+  background: #f8e7e3;
+  color: #712d24;
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.medication-form {
+  margin-top: 1.5rem;
+}
+
+.medication-list {
+  display: grid;
+  gap: 0;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  border-top: 1px solid #d9ddd5;
+  list-style: none;
+}
+
+.medication-list li {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  gap: 0.75rem;
+  border-bottom: 1px solid #d9ddd5;
+  padding: 1rem 0;
   color: #60716b;
-  line-height: 1.6;
+}
+
+.medication-list strong {
+  color: #203c34;
+}
+
+.empty {
+  margin: 1.75rem 0 0;
+  color: #60716b;
 }
 
 @media (max-width: 600px) {
@@ -127,5 +215,10 @@ body::before {
 
   .intro {
     padding-top: 5rem;
+  }
+
+  .medication-list li {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
   }
 }

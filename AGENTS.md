@@ -2,10 +2,10 @@
 
 ## Current status
 
-`infrastructure_plan.md` is the source of truth. The web tooling, Vite entrypoint,
-Docker foundation, and minimal Django project scaffold are in place. Do not
-introduce product pages, API handlers, domain models, authentication, or
-business data while performing infrastructure work.
+`infrastructure_plan.md` is the source of truth for infrastructure decisions.
+The first application slice now provides Django session authentication and
+account-owned medication persistence. Keep infrastructure and product changes
+within their respective boundaries.
 
 ## Repository map
 
@@ -14,13 +14,14 @@ business data while performing infrastructure work.
 - `docker/backend.Dockerfile`, `docker-compose.yml`, and `.dockerignore` —
   Docker tooling and local PostgreSQL only.
 - `scripts/docker-smoke.sh` — infrastructure-owned smoke test.
-- `backend/` — Django project scaffold, Python dependency/tool configuration, and
-  infrastructure-only tests; no API or business application package exists yet.
-- `web/` — React/Vite entrypoint, dependency/tool configuration, and
-  infrastructure-only tests; no product pages or business UI exists yet.
+- `backend/medications/` — account/session JSON endpoints, medication model, and
+  migrations. Every medication query must be owner-scoped.
+- `backend/tests/` — Django integration tests, including authentication and
+  persistence behavior.
+- `web/src/` — React account and medication UI with its relative `/api` client.
+- `docs/specs/account-medications.md` — approved API and persistence contract.
 - `.github/workflows/pr-checks.yml` — web-only pull-request quality checks.
 - `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
-- `docs/` — not created yet.
 - `.agents/skills/` — project-specific skills and instructions.
 
 ## Required reading and skill selection
@@ -42,6 +43,11 @@ Run `docker compose up --detach postgres` to start the local database and
 `./scripts/docker-smoke.sh` for a disposable readiness test; it always cleans
 up its Compose project and volume. Never place real secrets in `.env`, images,
 workflow logs, or tracked files.
+
+For application development, copy `.env.example` to an untracked `.env`, replace
+`DJANGO_SECRET_KEY`, apply migrations with `uv run manage.py migrate`, run Django
+on port 8000, and run Vite on port 5173. Vite proxies `/api` to Django so session
+cookies and CSRF requests remain same-origin in the browser.
 
 ## Verification and change checklist
 
