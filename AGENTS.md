@@ -67,8 +67,9 @@ git diff --check
 Keep CI commands equivalent once workflows are added. Update README and this
 file whenever paths, setup commands, services, or verification steps change.
 
-For account UI development, run `./scripts/dev.sh`. It loads local environment
+For application development, run `./scripts/dev.sh`. It loads local environment
 defaults, applies migrations, and stops both local servers on Ctrl+C. The
-current scaffold uses local SQLite; do not use real patient data.
+default local database is SQLite; set `DATABASE_URL` for PostgreSQL. Do not use
+real patient data. Keep `OPENFDA_API_KEY` server-side and untracked.
 `MEDCHECK_LIVE_AUTH=1 pnpm test:e2e` additionally verifies accounts against a
 running Django server with an isolated test database on port 8000.
