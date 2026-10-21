@@ -4,6 +4,7 @@ from . import views
 
 medication_patterns = [
     path("", views.search, name="medication-search"),
+    path("interactions/check/", views.interaction_check, name="medication-interaction-check"),
     path("<str:provider>/<uuid:external_id>/", views.detail, name="medication-detail"),
 ]
 

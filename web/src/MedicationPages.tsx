@@ -9,12 +9,14 @@ import { Account } from "./auth";
 import {
   MedicationDetail,
   MedicationSummary,
+  InteractionResult,
   Page,
   SavedMedication,
   medicationDetail,
   removeMedication,
   saveMedication,
   savedMedications,
+  checkInteractions,
   searchMedications,
 } from "./medications";
 
@@ -229,6 +231,13 @@ export function DetailPage({
             {medicine.isSaved && (
               <Link to="/my-medication">View My Medication</Link>
             )}
+            <Link
+              to={`/interactions?firstProvider=${encodeURIComponent(
+                medicine.provider,
+              )}&firstId=${encodeURIComponent(medicine.externalId)}`}
+            >
+              Check against another medication
+            </Link>
           </div>
           <p className="medical-notice">{medicine.disclaimer}</p>
           {medicine.isStale && (
@@ -272,6 +281,171 @@ export function DetailPage({
         </>
       )}
     </article>
+  );
+}
+
+export function InteractionPage() {
+  const [params] = useSearchParams();
+  const firstProvider = params.get("firstProvider") ?? "";
+  const firstId = params.get("firstId") ?? "";
+  const [first, setFirst] = useState<MedicationDetail | null>(null);
+  const [secondQuery, setSecondQuery] = useState("");
+  const [matches, setMatches] = useState<Page<MedicationSummary> | null>(null);
+  const [second, setSecond] = useState<MedicationSummary | null>(null);
+  const [result, setResult] = useState<InteractionResult | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!firstProvider || !firstId) return;
+    medicationDetail(firstProvider, firstId).then(setFirst, (reason) =>
+      setError(message(reason)),
+    );
+  }, [firstProvider, firstId]);
+
+  async function findSecond(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = secondQuery.trim();
+    if (!query) return;
+    setBusy(true);
+    setError("");
+    setMatches(null);
+    setSecond(null);
+    setResult(null);
+    try {
+      setMatches(await searchMedications(query, 1));
+    } catch (reason) {
+      setError(message(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runCheck() {
+    if (!first || !second) return;
+    setBusy(true);
+    setError("");
+    try {
+      setResult(await checkInteractions(first, second));
+    } catch (reason) {
+      setError(message(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="content-page" aria-labelledby="interaction-title">
+      <p className="section-label">Label screening</p>
+      <h1 id="interaction-title">Check two medications</h1>
+      <p className="page-note">
+        Select exact product labels. We check whether either label names the
+        other product or ingredient in its drug-interactions section.
+      </p>
+      {error && (
+        <p className="page-error" role="alert">
+          {error}
+        </p>
+      )}
+      {!first && !error && <p role="status">Loading first medication…</p>}
+      {first && (
+        <div className="interaction-card">
+          <h2>First medication</h2>
+          <p>
+            <strong>{first.displayName}</strong>
+            {first.genericName && <> · {first.genericName}</>}
+          </p>
+        </div>
+      )}
+      <form className="search-form interaction-search" onSubmit={findSecond}>
+        <label className="sr-only" htmlFor="second-medication">
+          Search for the second medication
+        </label>
+        <input
+          id="second-medication"
+          type="search"
+          value={secondQuery}
+          onChange={(event) => setSecondQuery(event.target.value)}
+          placeholder="Search the second brand or generic name"
+          maxLength={100}
+          required
+        />
+        <button type="submit" disabled={busy}>
+          Find
+        </button>
+      </form>
+      {matches && (
+        <ul className="medicine-list" aria-label="Second medication choices">
+          {matches.data.map((medicine) => (
+            <li key={medicine.externalId}>
+              <MedicineLink medicine={medicine} />
+              <Metadata medicine={medicine} />
+              <button
+                type="button"
+                disabled={medicine.externalId === first?.externalId}
+                onClick={() => {
+                  setSecond(medicine);
+                  setResult(null);
+                  setError("");
+                }}
+              >
+                {medicine.externalId === first?.externalId
+                  ? "Already selected"
+                  : second?.externalId === medicine.externalId
+                    ? "Selected"
+                    : "Select"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {second && (
+        <div className="interaction-card">
+          <h2>Second medication</h2>
+          <p>
+            <strong>{second.displayName}</strong>
+            {second.genericName && <> · {second.genericName}</>}
+          </p>
+          <button type="button" disabled={busy} onClick={runCheck}>
+            {busy ? "Checking…" : "Check labels"}
+          </button>
+        </div>
+      )}
+      {result && (
+        <section className="interaction-result" aria-live="polite">
+          <h2>
+            {result.status === "label_match"
+              ? "Interaction information found"
+              : "No matching interaction text found"}
+          </h2>
+          {result.status === "label_match" ? (
+            result.findings.map((finding) => (
+              <article className="interaction-finding" key={finding.sourceMedication}>
+                <h3>{finding.sourceMedication} label</h3>
+                <p>{finding.text}</p>
+                <p className="page-note">
+                  Matched: {finding.matchedTerm}. Label effective:{" "}
+                  {finding.labelEffectiveDate ?? "not provided"}.{" "}
+                  <a
+                    href={finding.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View source ↗
+                  </a>
+                </p>
+              </article>
+            ))
+          ) : (
+            <p>
+              Neither retrieved label named the other selected product or
+              ingredient in its interaction section.
+            </p>
+          )}
+          <p className="medical-notice">{result.disclaimer}</p>
+        </section>
+      )}
+    </section>
   );
 }
 
