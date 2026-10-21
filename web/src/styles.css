@@ -462,114 +462,209 @@ h1 {
   font-weight: 650;
 }
 
-.content-page {
-  width: min(100%, 52rem);
-  align-self: start;
-  padding: 6rem 0 3rem;
+.weekly-organizer {
+  margin-top: 3.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid #c7d2ca;
 }
 
-.content-page h1 {
-  font-size: clamp(2.5rem, 7vw, 4.5rem);
-}
-.content-page .search-form {
-  margin-top: 2rem;
-}
-.content-page .search-form button {
-  width: auto;
-  padding: 0 1.1rem;
-  font-weight: 650;
-}
-.page-note,
-.medicine-meta {
-  color: #60716b;
-  line-height: 1.6;
-}
-.medicine-meta {
-  margin: 0.4rem 0;
-  font-size: 0.9rem;
-  font-weight: 400;
-}
-.medicine-list a,
-.detail-actions a,
-.label-metadata a {
-  color: #24563f;
-}
-.medicine-list a {
-  font-size: 1.15rem;
-}
-.medicine-list button,
-.detail-actions button,
-.pagination button {
-  border: 1px solid #6c9a7d;
-  border-radius: 0.4rem;
-  padding: 0.5rem 0.9rem;
-  background: #fffefa;
-  color: #24563f;
-  cursor: pointer;
-}
-.medicine-list button:disabled,
-.detail-actions button:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-.page-error {
-  color: #9b3028;
-}
-.saved-badge {
-  display: inline-block;
-  margin-top: 0.5rem;
-  color: #24563f;
-  font-weight: 700;
-}
-.pagination {
+.organizer-heading {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-.detail-page > .home-link {
-  display: inline-block;
-  margin: 0 0 2rem;
-}
-.detail-actions {
-  display: flex;
-  align-items: center;
+  align-items: end;
+  justify-content: space-between;
   gap: 1rem;
-  margin: 1.5rem 0;
 }
-.medical-notice {
-  padding: 1rem;
-  border-left: 4px solid #6c9a7d;
-  background: #edf3ee;
-  line-height: 1.6;
-}
-.label-metadata {
-  display: grid;
-  gap: 0.65rem;
-  margin: 2rem 0;
-}
-.label-metadata div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-.label-metadata dt {
-  min-width: 10rem;
-  font-weight: 700;
-}
-.label-metadata dd {
+
+.organizer-heading h2 {
   margin: 0;
+  color: #1d332b;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  letter-spacing: -0.04em;
 }
-.label-section {
-  border-top: 1px solid #c7d2ca;
-  padding: 1.25rem 0;
+
+.organizer-heading .section-label,
+.organizer-details-heading .section-label {
+  margin-bottom: 0.4rem;
 }
-.label-section h2 {
+
+.organizer-caption {
+  color: #60716b;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.organizer {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(5.5rem, 1fr));
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid #c7d2ca;
+  border-radius: 0.875rem;
+  background: #dce9df;
+  box-shadow: 0 0.75rem 2rem rgb(44 72 57 / 8%);
+}
+
+.organizer-day {
+  display: grid;
+  min-height: 8.5rem;
+  align-content: start;
+  justify-items: center;
+  gap: 0.3rem;
+  padding: 0.75rem 0.5rem 0.65rem;
+  border: 1px solid #b8cbbb;
+  border-radius: 0.625rem;
+  background: #f7f5f0;
+  color: #1d332b;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.organizer-day:hover,
+.organizer-day:focus-visible {
+  border-color: #6c9a7d;
+  background: #fffefa;
+  outline: 0;
+  transform: translateY(-0.125rem);
+}
+
+.organizer-day:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgb(108 154 125 / 30%);
+}
+
+.organizer-day[aria-pressed="true"] {
+  border-color: #2f6b4f;
+  background: #fffefa;
+  box-shadow: inset 0 0 0 2px #2f6b4f;
+}
+
+.organizer-day-name {
+  color: #60716b;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.organizer-day-number {
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.pill-compartment {
+  display: flex;
+  width: 100%;
+  min-height: 3.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid #d2ddd3;
+  border-radius: 0.5rem;
+  background: #edf3ee;
+}
+
+.pill {
+  display: block;
+  width: 0.8rem;
+  height: 1.35rem;
+  border: 1px solid #c28555;
+  border-radius: 50%;
+  background: linear-gradient(to bottom, #f5c18e 0 50%, #fff4e8 50% 100%);
+  transform: rotate(30deg);
+}
+
+.pill-empty {
+  width: 1.15rem;
+  height: 0.2rem;
+  border-radius: 999px;
+  background: #b8cbbb;
+}
+
+.organizer-details {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #c7d2ca;
+  border-radius: 0.75rem;
+  background: #fffefa;
+}
+
+.organizer-details-heading h3 {
+  margin: 0;
+  color: #1d332b;
   font-size: 1.25rem;
 }
-.label-section p {
-  white-space: pre-wrap;
+
+.dose-list {
+  display: grid;
+  gap: 0.625rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dose-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #d2ddd3;
+  border-radius: 0.5rem;
+  background: #f7f5f0;
+}
+
+.dose-icon {
+  width: 1.25rem;
+  height: 0.75rem;
+  flex: 0 0 auto;
+  border: 1px solid #c28555;
+  border-radius: 999px;
+  background: #f5c18e;
+  transform: rotate(-35deg);
+}
+
+.dose-copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dose-copy strong {
   overflow-wrap: anywhere;
-  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.dose-copy span {
+  color: #60716b;
+  font-size: 0.875rem;
+}
+
+.food-badge {
+  padding: 0.35rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.food-badge.with.food {
+  background: #f6ead0;
+  color: #785c25;
+}
+
+.food-badge.without.food {
+  background: #e8edf0;
+  color: #4d626d;
+}
+
+.organizer-empty {
+  margin: 1rem 0 0;
+  color: #60716b;
 }
 
 .sr-only {
@@ -616,5 +711,25 @@ h1 {
 
   .empty-state {
     margin-top: 2rem;
+  }
+
+  .organizer-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .organizer {
+    overflow-x: auto;
+    grid-template-columns: repeat(7, 5.5rem);
+  }
+
+  .dose-card {
+    align-items: start;
+    flex-wrap: wrap;
+  }
+
+  .food-badge {
+    margin-left: 2rem;
   }
 }
