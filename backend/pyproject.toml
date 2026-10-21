@@ -1,7 +1,7 @@
 [project]
 name = "medcheck-backend"
 version = "0.0.0"
-description = "Infrastructure-only backend tooling for Medcheck."
+description = "MedCheck backend."
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "Django>=5.2,<5.3",
@@ -27,7 +27,7 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 
 [tool.coverage.run]
 branch = true
-source = ["tests"]
+source = ["accounts", "medications"]
 
 [tool.coverage.report]
 show_missing = true
@@ -42,5 +42,5 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pyright]
 pythonVersion = "3.13"
-include = ["tests"]
+include = ["medications", "tests"]
 typeCheckingMode = "basic"

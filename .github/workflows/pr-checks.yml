@@ -23,6 +23,20 @@ jobs:
   backend:
     name: Backend tooling
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_DB: medcheck_test
+          POSTGRES_USER: medcheck
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medcheck -d medcheck_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
@@ -43,10 +57,11 @@ jobs:
         run: uv run ruff check .
       - name: Type check
         run: uv run pyright
-      - name: Run infrastructure tests with coverage
-        run: uv run pytest --cov=tests --cov-report=xml
+      - name: Run application tests with PostgreSQL and coverage
+        run: uv run pytest --cov=accounts --cov=medications --cov-report=xml
         env:
           DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: postgresql://medcheck:ci-only-password@localhost:5432/medcheck_test
       - name: Scan Python application code
         run: uv run bandit --quiet --recursive accounts medications config
       - name: Upload backend coverage
