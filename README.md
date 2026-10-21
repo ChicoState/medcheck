@@ -4,10 +4,10 @@
 
 The repository has a minimal Django scaffold, a React/Vite landing-page
 prototype, a local PostgreSQL service, and pull-request checks. The landing page
-accepts a local search term but does not query medical information. The initial
-account API provides session-based registration, login, logout, CSRF protection,
-and current-user status; no medical domain models or persistent product
-workflow exists yet.
+accepts a local search term but does not query medical information. The account
+API provides session-based registration, login, logout, CSRF protection, and
+current-user status. Authenticated users also have a persisted weekly
+medication schedule; schedule editing is not implemented yet.
 
 ## Repository map
 
@@ -17,8 +17,8 @@ workflow exists yet.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — Django project scaffold, account API, Python/Django tooling,
-  locked dependencies, and tests; no medical business code exists yet.
+- `backend/` — Django project scaffold, account and medication schedule APIs,
+  Python/Django tooling, locked dependencies, migrations, and tests.
 - `web/` — React/Vite landing-page prototype, locked dependencies,
   infrastructure probes, and Playwright browser tests.
 - `.github/workflows/pr-checks.yml` — secret scanning plus backend and web
@@ -86,7 +86,7 @@ workflow exists yet.
    foundation:
 
    ```bash
-   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts config)
+   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts medications config)
    (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
    ./scripts/docker-smoke.sh
    docker compose down --volumes

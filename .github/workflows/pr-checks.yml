@@ -48,7 +48,7 @@ jobs:
         env:
           DJANGO_SECRET_KEY: test-secret-key-for-ci
       - name: Scan Python application code
-        run: uv run bandit --quiet --recursive accounts config
+        run: uv run bandit --quiet --recursive accounts medications config
       - name: Upload backend coverage
         if: always()
         uses: actions/upload-artifact@v4
