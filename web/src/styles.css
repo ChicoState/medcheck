@@ -462,6 +462,154 @@ h1 {
   font-weight: 650;
 }
 
+.content-page {
+  width: min(100%, 52rem);
+  align-self: start;
+  padding: 6rem 0 3rem;
+}
+
+.content-page h1 {
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+}
+
+.content-page .search-form {
+  margin-top: 2rem;
+}
+
+.content-page .search-form button {
+  width: auto;
+  padding: 0 1.1rem;
+  font-weight: 650;
+}
+
+.page-note,
+.medicine-meta {
+  color: #60716b;
+  line-height: 1.6;
+}
+
+.medicine-meta {
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.medicine-list a,
+.detail-actions a,
+.label-metadata a {
+  color: #24563f;
+}
+
+.medicine-list a {
+  font-size: 1.15rem;
+}
+
+.medicine-list button,
+.detail-actions button,
+.pagination button {
+  border: 1px solid #6c9a7d;
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  background: #fffefa;
+  color: #24563f;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.medicine-list button:disabled,
+.detail-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.page-error {
+  color: #9b3028;
+  line-height: 1.5;
+}
+
+.saved-badge {
+  display: inline-block;
+  margin-left: 0.75rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  background: #dce9df;
+  color: #24563f;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pagination,
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.detail-page > .home-link {
+  display: inline-block;
+  margin-bottom: 2rem;
+}
+
+.medical-notice {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-left: 3px solid #6c9a7d;
+  background: #edf3ee;
+  color: #557267;
+  line-height: 1.5;
+}
+
+.label-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1rem 0;
+  border-top: 1px solid #c7d2ca;
+  border-bottom: 1px solid #c7d2ca;
+}
+
+.label-metadata div {
+  min-width: 0;
+}
+
+.label-metadata dt {
+  color: #60716b;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.label-metadata dd {
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.label-section {
+  margin-top: 2.5rem;
+}
+
+.label-section h2 {
+  margin-bottom: 0.5rem;
+}
+
+.label-section p {
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.remove-confirmation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  font-weight: 400;
+}
+
 .weekly-organizer {
   margin-top: 3.5rem;
   padding-top: 2rem;

@@ -8,8 +8,18 @@ import {
 } from "react-router-dom";
 import { Account, AccountError, accountAction, currentAccount } from "./auth";
 import { currentMedicationSchedule, MedicationSchedule } from "./medications";
+import { DetailPage, SavedPage, SearchPage } from "./MedicationPages";
 
 type OpenPanel = "menu" | "account" | null;
+
+export type SavedMedicine = {
+  id: string;
+  name: string;
+};
+
+type AppProps = {
+  savedMedicines?: SavedMedicine[];
+};
 
 function Navigation({
   account,
