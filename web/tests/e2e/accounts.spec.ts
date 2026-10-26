@@ -33,6 +33,34 @@ test("accounts unlock My Medication and survive reload until sign out", async ({
       json: { user },
     });
   });
+  await page.route("**/api/medications/schedule/", async (route) => {
+    await route.fulfill({
+      json: {
+        schedule: {
+          Monday: [],
+          Tuesday: [],
+          Wednesday: [
+            {
+              id: 1,
+              name: "Atorvastatin",
+              time: "9:00 PM",
+              food: "without food",
+            },
+            {
+              id: 2,
+              name: "Lisinopril",
+              time: "8:30 AM",
+              food: "without food",
+            },
+          ],
+          Thursday: [],
+          Friday: [],
+          Saturday: [],
+          Sunday: [],
+        },
+      },
+    });
+  });
   await page.goto("/");
   await page.getByRole("button", { name: "Open menu" }).click();
   await expect(page.getByRole("link", { name: "My Medication" })).toHaveCount(
@@ -59,6 +87,16 @@ test("accounts unlock My Medication and survive reload until sign out", async ({
   await expect(
     page.getByRole("heading", { name: "My Medication" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Weekly organizer" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Wednesday/ }).click();
+  await expect(
+    page.getByRole("heading", { name: /Wednesday's medicines/ }),
+  ).toBeVisible();
+  await expect(page.getByText("Atorvastatin")).toBeVisible();
+  await expect(page.getByText("9:00 PM")).toBeVisible();
+  await expect(page.getByText("Take without food")).toHaveCount(2);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "My Medication" }),
