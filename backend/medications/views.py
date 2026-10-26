@@ -192,7 +192,11 @@ def detail(request, provider, external_id):
 
 @require_http_methods(["POST"])
 def interaction_check(request):
-    if request.content_length is not None and request.content_length > 8192:
+    try:
+        content_length = int(request.META.get("CONTENT_LENGTH", "0"))
+    except (TypeError, ValueError):
+        content_length = 0
+    if content_length > 8192:
         return _error("INVALID_INPUT", "Enter two valid medication labels.", 400)
     try:
         body = json.loads(request.body)
@@ -213,11 +217,15 @@ def interaction_check(request):
     if parsed[0] == parsed[1]:
         return _error("INVALID_INPUT", "Choose two different medication labels.", 400)
     try:
-        labels = [_medication(external_id) for external_id in parsed]
+        records = [_medication(external_id) for external_id in parsed]
     except ProviderError as error:
         return _provider_error(error)
-    if any(label is None for label in labels):
+    if any(record is None for record in records):
         return _error("NOT_FOUND", "One or more medication labels were not found.", 404)
+    first_record, second_record = records
+    if first_record is None or second_record is None:
+        return _error("NOT_FOUND", "One or more medication labels were not found.", 404)
+    labels = [_details(first_record, False), _details(second_record, False)]
     return JsonResponse(check_label_pair(*labels))
 
 

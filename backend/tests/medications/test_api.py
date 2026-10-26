@@ -196,7 +196,8 @@ def test_interaction_check_rejects_invalid_pairs():
     url = "/api/medications/interactions/check/"
     assert Client().post(url, "{}", content_type="application/json").status_code == 400
     assert (
-        Client().post(
+        Client()
+        .post(
             url,
             json.dumps(
                 {
@@ -207,6 +208,7 @@ def test_interaction_check_rejects_invalid_pairs():
                 }
             ),
             content_type="application/json",
-        ).status_code
+        )
+        .status_code
         == 400
     )

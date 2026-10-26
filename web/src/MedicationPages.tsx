@@ -420,7 +420,10 @@ export function InteractionPage() {
           </h2>
           {result.status === "label_match" ? (
             result.findings.map((finding) => (
-              <article className="interaction-finding" key={finding.sourceMedication}>
+              <article
+                className="interaction-finding"
+                key={finding.sourceMedication}
+              >
                 <h3>{finding.sourceMedication} label</h3>
                 <p>{finding.text}</p>
                 <p className="page-note">
