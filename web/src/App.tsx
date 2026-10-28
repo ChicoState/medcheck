@@ -7,7 +7,12 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { Account, AccountError, accountAction, currentAccount } from "./auth";
-import { DetailPage, SavedPage, SearchPage } from "./MedicationPages";
+import {
+  DetailPage,
+  InteractionPage,
+  SavedPage,
+  SearchPage,
+} from "./MedicationPages";
 
 type OpenPanel = "menu" | "account" | null;
 
@@ -347,6 +352,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/interactions" element={<InteractionPage />} />
         <Route
           path="/medications/:provider/:externalId"
           element={

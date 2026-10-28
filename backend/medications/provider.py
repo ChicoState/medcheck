@@ -23,6 +23,7 @@ SECTIONS = (
     ("warnings", "Warnings"),
     ("boxed_warning", "Boxed warning"),
     ("contraindications", "Contraindications"),
+    ("drug_interactions", "Drug interactions"),
     ("adverse_reactions", "Adverse reactions"),
     ("dosage_and_administration", "Dosage and administration"),
     ("information_for_patients", "Information for patients"),
