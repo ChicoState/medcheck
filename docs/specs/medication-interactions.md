@@ -59,3 +59,19 @@ retrieved labels, not that the products are safe to combine.
 (cd web && pnpm build)
 git diff --check
 ```
+
+## My Medication integration
+
+Load the entire private saved library, then automatically screen each unique
+pair, including pairs across pagination boundaries. No selection or start button
+is required. Run requests sequentially to avoid flooding the provider. Show
+progress, pair names, findings, source links, and the existing disclaimer.
+A failed pair must not hide successful checks or the medication list.
+Removing a saved medication cancels stale work and screens the remaining pairs.
+Zero or one saved medication explains that two are needed. Cancel pending UI
+updates on navigation; never show results from a previous library version.
+
+Implementation uses typed React state and existing API and CSS classes in
+`web/src/MedicationPages.tsx`. Browser regression tests cover automatic checks,
+pagination, partial failures, removal, and unexpected rendering errors. Run the
+web verification commands above and `pnpm test:e2e`.

@@ -157,3 +157,168 @@ test("shows provider errors without losing the search form", async ({
     page.getByRole("searchbox", { name: "Medication name" }),
   ).toBeVisible();
 });
+
+test("automatically checks the full library, keeps partial results, and rechecks after removal", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const medicines = [
+    medicine,
+    { ...medicine, externalId: "second-label", displayName: "Aspirin" },
+    { ...medicine, externalId: "third-label", displayName: "Third medicine" },
+  ].map((item, i) => ({
+    ...item,
+    savedId: i + 1,
+    savedAt: "2026-10-19",
+    labelEffectiveDate: null,
+    isStale: false,
+  }));
+  let removed = false;
+  await page.route("**/api/auth/**", (route) =>
+    route.fulfill({
+      json: route.request().url().includes("csrf/")
+        ? { csrfToken: "token" }
+        : { user: { id: 1, email: "member@example.com" } },
+    }),
+  );
+  await page.route("**/api/saved-medications/**", (route) => {
+    if (route.request().method() === "DELETE") {
+      removed = true;
+      return route.fulfill({ status: 204 });
+    }
+    const pageNumber = Number(
+      new URL(route.request().url()).searchParams.get("page"),
+    );
+    return route.fulfill({
+      json: {
+        data:
+          pageNumber === 1
+            ? medicines
+                .slice(0, 2)
+                .filter((item) => !removed || item.savedId !== 1)
+            : medicines.slice(2),
+        pagination: {
+          page: pageNumber,
+          pageSize: 2,
+          hasNextPage: pageNumber === 1,
+        },
+      },
+    });
+  });
+  const pairs: string[][] = [];
+  await page.route("**/api/medications/interactions/check/", async (route) => {
+    const ids = route
+      .request()
+      .postDataJSON()
+      .medications.map((item: { externalId: string }) => item.externalId);
+    pairs.push(ids);
+    if (ids.includes("third-label") && ids.includes(medicine.externalId))
+      return route.fulfill({
+        status: 503,
+        json: { error: { message: "Provider unavailable." } },
+      });
+    const matched = ids.includes(medicine.externalId);
+    return route.fulfill({
+      json: {
+        status: matched ? "label_match" : "no_label_match",
+        medications: [],
+        findings: matched
+          ? [
+              {
+                sourceMedication: medicine.displayName,
+                targetMedication: "Aspirin",
+                matchedTerm: "aspirin",
+                text: "Consult a pharmacist about aspirin.",
+                sourceUrl: "https://api.fda.gov/drug/label.json",
+                labelEffectiveDate: null,
+                datasetUpdatedAt: null,
+              },
+            ]
+          : [],
+        disclaimer: "No match does not prove safety.",
+      },
+    });
+  });
+  await page.goto("/my-medication");
+  await expect(
+    page.getByText("Screening finished. 2 of 3 pairs checked successfully."),
+  ).toBeVisible();
+  expect(pairs).toHaveLength(3);
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Check labels" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByText("Consult a pharmacist about aspirin."),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Provider unavailable.");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "Third medicine" }),
+  ).toBeVisible();
+  expect(pairs).toHaveLength(3);
+  await page.getByRole("button", { name: "Previous", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Remove", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Confirm remove" }).click();
+  await expect(
+    page.getByText("Screening finished. 1 of 1 pairs checked successfully."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Consult a pharmacist about aspirin."),
+  ).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("typing in search and account inputs keeps the page rendered", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/api/auth/me/", (route) =>
+    route.fulfill({ status: 401, json: {} }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("searchbox")
+    .pressSequentially("ibuprofen aspirin", { delay: 30 });
+  await expect(
+    page.getByRole("heading", { name: "MedCheck", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Account", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page
+    .getByLabel("Email", { exact: true })
+    .pressSequentially("member@example.com", { delay: 30 });
+  await page
+    .getByLabel("Password", { exact: true })
+    .pressSequentially("test-password", { delay: 30 });
+  await expect(page.getByLabel("Email", { exact: true })).toHaveValue(
+    "member@example.com",
+  );
+  expect(errors).toEqual([]);
+});
+
+test("unexpected rendering failures show recovery instead of a white page", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/me/", (route) =>
+    route.fulfill({ status: 401, json: {} }),
+  );
+  let broken = true;
+  await page.route("**/api/medications/?**", (route) =>
+    route.fulfill({ json: { data: broken ? [null] : [medicine], pagination } }),
+  );
+  await page.goto("/search?q=ibuprofen");
+  await expect(
+    page.getByRole("heading", { name: "Something went wrong" }),
+  ).toBeVisible();
+  broken = false;
+  await page.getByRole("button", { name: "Reload page" }).click();
+  await expect(
+    page.getByRole("link", { name: medicine.displayName }),
+  ).toBeVisible();
+});
