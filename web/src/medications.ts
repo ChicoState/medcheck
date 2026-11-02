@@ -29,6 +29,23 @@ export type SavedMedication = MedicationSummary & {
   isStale: boolean;
 };
 
+export type InteractionFinding = {
+  sourceMedication: string;
+  targetMedication: string;
+  matchedTerm: string;
+  text: string;
+  sourceUrl: string;
+  labelEffectiveDate: string | null;
+  datasetUpdatedAt: string | null;
+};
+
+export type InteractionResult = {
+  status: "label_match" | "no_label_match";
+  medications: MedicationSummary[];
+  findings: InteractionFinding[];
+  disclaimer: string;
+};
+
 export type Page<T> = {
   data: T[];
   pagination: { page: number; pageSize: number; hasNextPage: boolean };
@@ -95,6 +112,23 @@ export function medicationDetail(
   return request(
     `/api/medications/${encodeURIComponent(provider)}/${encodeURIComponent(externalId)}/`,
   );
+}
+
+export async function checkInteractions(
+  first: MedicationSummary,
+  second: MedicationSummary,
+): Promise<InteractionResult> {
+  const token = await csrfToken();
+  return request("/api/medications/interactions/check/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": token },
+    body: JSON.stringify({
+      medications: [
+        { provider: first.provider, externalId: first.externalId },
+        { provider: second.provider, externalId: second.externalId },
+      ],
+    }),
+  });
 }
 
 export function savedMedications(page: number): Promise<Page<SavedMedication>> {

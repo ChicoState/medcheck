@@ -505,6 +505,7 @@ export function App({ savedMedicines = [] }: AppProps) {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/interactions" element={<InteractionPage />} />
         <Route
           path="/medications/:provider/:externalId"
           element={
