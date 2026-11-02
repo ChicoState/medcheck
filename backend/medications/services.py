@@ -24,9 +24,11 @@ DEFAULT_DOSES = (
 
 @transaction.atomic
 def get_or_create_schedule(user):
-    schedule, created = MedicationSchedule.objects.get_or_create(user=user)
+    schedule, created = MedicationSchedule.objects.get_or_create(  # pyright: ignore[reportAttributeAccessIssue]
+        user=user
+    )
     if created:
-        MedicationDose.objects.bulk_create(
+        MedicationDose.objects.bulk_create(  # pyright: ignore[reportAttributeAccessIssue]
             [
                 MedicationDose(
                     schedule=schedule,
