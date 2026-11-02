@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1.7
-# Development-tooling base image only. A runnable Django entrypoint belongs to
-# the future backend application, not to infrastructure scaffolding.
 FROM ghcr.io/astral-sh/uv:0.9.17 AS uv
 
 FROM python:3.13.11-slim-bookworm AS development
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    RUFF_CACHE_DIR=/tmp/ruff-cache
 
 COPY --from=uv /uv /uvx /bin/
 
@@ -18,7 +18,13 @@ RUN apt-get update \
     && useradd --uid 10001 --gid app --create-home --shell /usr/sbin/nologin app
 
 WORKDIR /workspace/backend
+
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --all-groups --frozen
+
+COPY backend/ ./
 USER app
 
-# This proves the pinned toolchain is usable without inventing an app project.
-CMD ["uv", "--version"]
+EXPOSE 8000
+
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]

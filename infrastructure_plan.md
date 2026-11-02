@@ -1,6 +1,8 @@
 # Infrastructure Plan
 
-> Planning only. This document describes future infrastructure work. No installations, configuration changes, containers, workflows, deployments, or other implementation files were created by the infrastructure-planning process.
+> This document is the source of truth for the implemented local infrastructure and
+> the remaining future work. Local Docker development is implemented; production
+> hosting and release deployment remain future work.
 
 ## 1. Project and User Experience
 
@@ -88,7 +90,7 @@ These are developer-workstation prerequisites that will not be supplied by the p
 | Git | Source control | All developer machines | Supported current release | Future documented setup check | Repository work happens on the host |
 | Docker Desktop or Docker Engine | Local containers | Developers working on backend/database | Supported current release | Future documented setup check | Docker is the host container runtime |
 | Node.js and pnpm | React web development | Web developers and CI runners | Supported Node LTS | Future documented setup check | Needed for the host-facing web toolchain |
-| Python and uv | Django local development | Backend developers and CI runners | Supported Python release | Future documented setup check | Needed for editor integration and non-container workflows |
+| Python and uv | Django local development outside Docker and CI runners | Developers choosing host-based backend work and CI runners | Supported Python release | Future documented setup check | Docker supplies the backend runtime for the Compose workflow, but host-based editor integration and CI still use the tool directly |
 
 ### Host tools intentionally not required
 
@@ -97,17 +99,17 @@ These are developer-workstation prerequisites that will not be supplied by the p
 
 ## 9. Docker Plan
 
-- **Planned Docker role:** Development and production deployment for the Django backend.
-- **Future files that would be created during implementation:** Backend `Dockerfile`, development Compose file, `.dockerignore`, and environment-variable templates.
-- **Planned images and services:** A Django backend image and local PostgreSQL service; production uses managed PostgreSQL.
-- **Development container behavior:** Bind-mount backend source; use a named volume for PostgreSQL data; run dependencies within the planned development image.
-- **Ports:** Document backend and PostgreSQL ports in future Compose configuration; bind database access locally only.
+- **Docker role:** Local development for the Django backend and React/Vite client; production deployment remains a separate future decision.
+- **Implemented files:** `docker/backend.Dockerfile`, `docker/web.Dockerfile`, `docker-compose.yml`, `.dockerignore`, and `.env.example`.
+- **Development services:** `backend` runs Django with dependencies supplied by the image, `web` runs the Vite development server with pnpm dependencies supplied by its image, and `postgres` provides the local database.
+- **Development container behavior:** Backend and web source are bind-mounted; dependency caches use named volumes; PostgreSQL uses a named data volume; the backend waits for PostgreSQL health before migrating and starting.
+- **Ports:** Web is available at `127.0.0.1:5173`, Django at `127.0.0.1:8000`, and PostgreSQL is bound locally for debugging and host-based tools.
 - **Bind mounts and named volumes:** Backend source bind mount for development; named volume for local database persistence.
 - **Environment-variable and secret handling:** Local non-secret templates only; production values originate in protected hosting and GitHub environments.
-- **Local database or service containers:** PostgreSQL only unless a later feature adds a justified service.
+- **Local database or service containers:** PostgreSQL, Django backend, and Vite web development server.
 - **Production image or non-container release path:** Multi-stage, minimal, non-root backend image; Vite build deploys static web files.
 - **Build stages and hardening:** Multi-stage build, non-root runtime user, minimal runtime image, `.dockerignore`, health check, and no embedded secrets.
-- **Planned future development command:** Document a future Compose command after Compose files exist; do not run it during planning.
+- **Development command:** `docker compose up --build` starts the complete local stack. `docker compose down` stops it; `docker compose down --volumes` also resets local PostgreSQL data.
 - **Planned future production command:** Document a future image build command after its configuration exists; do not run it during planning.
 
 ## 10. GitHub Actions Plan
@@ -165,7 +167,7 @@ These are developer-workstation prerequisites that will not be supplied by the p
 - [ ] Web package manifest and pnpm lockfile.
 - [ ] Backend and web test configuration.
 - [ ] Ruff, Pyright, Prettier, ESLint, TypeScript, Bandit, Semgrep, and Gitleaks configuration.
-- [ ] Backend `Dockerfile`, Compose file, `.dockerignore`, and non-secret environment template.
+- [x] Backend and web development Dockerfiles, Compose file, `.dockerignore`, and non-secret environment template.
 - [ ] `.github/workflows/pr-checks.yml`.
 - [ ] `.github/workflows/release.yml`.
 - [ ] Managed-hosting release configuration.

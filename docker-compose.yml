@@ -21,8 +21,47 @@ services:
       retries: 12
       start_period: 5s
 
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-medcheck}:${POSTGRES_PASSWORD:-medcheck_local_only}@postgres:5432/${POSTGRES_DB:-medcheck}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-development-only-change-me}
+      OPENFDA_API_KEY: ${OPENFDA_API_KEY:-}
+    volumes:
+      - ./backend:/workspace/backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >-
+      sh -c 'uv run python manage.py migrate --noinput &&
+      uv run python manage.py runserver 0.0.0.0:8000'
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./web:/workspace/web
+      - web-node-modules:/workspace/web/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+    networks:
+      - local
+    depends_on:
+      - backend
+
 volumes:
   postgres-data:
+  web-node-modules:
 
 networks:
   local:

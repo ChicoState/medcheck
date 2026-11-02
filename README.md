@@ -9,10 +9,12 @@ a reference tool, not personal medical advice or a medication regimen tracker.
 
 ## Repository map
 
-- `docker/backend.Dockerfile` — non-root Python and uv tooling image; it is not
-  a runnable application image until a backend entrypoint is implemented.
-- `docker-compose.yml` — local PostgreSQL 17.6 service with a named volume and
-  readiness health check.
+- `docker/backend.Dockerfile` — non-root Django development image with uv and
+  locked backend dependencies.
+- `docker/web.Dockerfile` — Node 22 development image with Corepack/pnpm and
+  locked web dependencies.
+- `docker-compose.yml` — local PostgreSQL, Django, and Vite services with named
+  volumes and PostgreSQL readiness checks.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
 - `backend/` — Django account and medication APIs, openFDA adapter, migrations,
@@ -29,12 +31,10 @@ a reference tool, not personal medical advice or a medication regimen tracker.
 ## Getting Started
 
 1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-   or Docker Engine with Compose v2, [uv](https://docs.astral.sh/uv/getting-started/installation/),
-   and Node.js 22.23.3 with Corepack. The version is recorded in
-   `.node-version`. Install [Python 3.13](https://www.python.org/downloads/) or
-   allow uv to install its managed Python 3.13 runtime. The Docker image supplies
-   Python and uv only for Docker work; host tools support editor and local
-   quality-check workflows.
+   or Docker Engine with Compose v2. The Docker workflow supplies Python, uv,
+   Node.js, and pnpm inside the application images. Install
+   [uv](https://docs.astral.sh/uv/getting-started/installation/) and Node.js 22
+   only if you also want host-based editor or quality-check workflows.
 2. Copy the non-secret local defaults and export them for Django commands:
 
    ```bash
@@ -48,51 +48,37 @@ a reference tool, not personal medical advice or a medication regimen tracker.
    from the shell, so source the file again in each new shell before running
    Django commands. Never place a production secret in this file.
 
-3. Install the locked tooling dependencies:
+3. Build and start the complete local application:
+
+   ```bash
+   docker compose up --build --detach --wait
+   ```
+
+   Open `http://127.0.0.1:5173`. Django is available at
+   `http://127.0.0.1:8000`; PostgreSQL is available only on
+   `127.0.0.1:5432`.
+
+4. To use the host-based development fallback instead:
 
    ```bash
    (cd backend && uv sync --all-groups --frozen)
    (cd web && corepack enable && pnpm install --frozen-lockfile)
-   (cd web && pnpm exec playwright install chromium)
-   ```
-
-4. Build the development-tooling image:
-
-   ```bash
-   docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
-   ```
-
-5. Start PostgreSQL locally:
-
-   ```bash
-   docker compose up --detach postgres
-   ```
-
-6. Start the local application:
-
-   ```bash
    ./scripts/dev.sh
    ```
 
-   Open `http://127.0.0.1:5173`. Press Ctrl+C in that terminal to stop both
-   the Django API and Vite web server. The script runs Django migrations using
-   `.env` when available, or the safe values in `.env.example`.
-
-   The default database is local SQLite. To use the local PostgreSQL service,
-   set `DATABASE_URL=postgresql://medcheck:medcheck_local_only@127.0.0.1:5432/medcheck`
-   in your untracked `.env` before starting the script. Set `OPENFDA_API_KEY`
-   there as well for live provider use; a key is optional for a limited local
-   trial but required before public deployment. Do not commit these values.
-
-7. Run the available backend, web, and browser checks, then clean up the Docker
-   foundation:
+5. Run the available backend, web, and browser checks, then clean up the Docker
+   stack:
 
    ```bash
    (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=accounts --cov=medications && uv run bandit --quiet --recursive accounts config medications)
    (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
-   ./scripts/docker-smoke.sh
    docker compose down --volumes
    ```
+
+   `scripts/docker-smoke.sh` remains a disposable PostgreSQL-only foundation
+   smoke test. Set `OPENFDA_API_KEY` in the untracked `.env` for live provider
+   use; it is optional for a limited local trial but required before public
+   deployment.
 
 The local database is exposed only on `127.0.0.1:5432` by default. Change
 `POSTGRES_PORT` in an untracked `.env` if that port is occupied. Reset local
@@ -115,9 +101,10 @@ retention, and monitoring settings must be reviewed before launch.
 
 ## Troubleshooting
 
-For local medication flows, run `./scripts/dev.sh`, search a medication name,
-open an FDA product label, and sign in to save it. My Medication appears in the
-menu after authentication and the session survives a reload. Product labels
+For local medication flows, run `docker compose up --build --detach --wait`,
+search a medication name, open an FDA product label, and sign in to save it. My
+Medication appears in the menu after authentication and the session survives a
+reload. Product labels
 can represent different manufacturers and formulations of similarly named
 medications; always check the source and consult a healthcare professional.
 
@@ -138,7 +125,8 @@ run `cd web && MEDCHECK_LIVE_AUTH=1 pnpm test:e2e`.
   `node@22` is keg-only, so add `/opt/homebrew/opt/node@22/bin` to `PATH` when
   using that installation.
 - **`uv` or `pnpm` is missing:** install uv or run `corepack enable` under Node
-  22, then rerun the locked install command.
+  22 only when using the host-based fallback; the Docker workflow does not need
+  either command installed on the host.
 - **`./scripts/dev.sh` reports a missing command:** run the dependency
   installation commands from Getting Started. On Apple Silicon Homebrew setups,
   the script automatically adds Node 22's `pnpm` location to its PATH.
