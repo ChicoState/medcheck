@@ -22,7 +22,9 @@ jobs:
 
   backend:
     name: Backend tooling
-    runs-on: ubuntu-latest
+    # Python 3.13.11 is published for Ubuntu 24.04, but not Ubuntu 26.04.
+    # Keep this runner pinned while backend/.python-version remains exact.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17.6
