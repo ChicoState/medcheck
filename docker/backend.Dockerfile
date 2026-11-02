@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 FROM ghcr.io/astral-sh/uv:0.9.17 AS uv
 
-FROM python:3.13.11-slim-bookworm AS development
+FROM python:3.13.16-slim-bookworm AS development
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
