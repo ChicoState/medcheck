@@ -31,6 +31,21 @@ LABEL = {
     "datasetUpdatedAt": "2026-10-16",
     "sourceUrl": "https://api.fda.gov/drug/label.json?search=set_id%3A%2200653b7c-7099-487e-9a01-e89781c21323%22",
 }
+SECOND_LABEL = {
+    **LABEL,
+    "externalId": "10653b7c-7099-487e-9a01-e89781c21323",
+    "displayName": "Xanax",
+    "genericName": "ALPRAZOLAM",
+    "brandNames": ["XANAX"],
+    "activeIngredients": ["alprazolam 0.5 mg"],
+    "sections": [
+        {
+            "key": "drug_interactions",
+            "title": "Drug interactions",
+            "text": "Use with opioids may cause profound sedation.",
+        }
+    ],
+}
 
 
 @pytest.fixture(autouse=True)
@@ -141,3 +156,59 @@ def test_invalid_save_and_search_throttle():
         for _ in range(60):
             assert first.get("/api/medications/?q=ibuprofen").status_code == 200
         assert first.get("/api/medications/?q=ibuprofen").status_code == 429
+
+
+def test_interaction_check_returns_label_match_and_does_not_require_login():
+    first = {
+        **LABEL,
+        "displayName": "Oxycodone",
+        "genericName": "OXYCODONE",
+        "brandNames": ["OXYCODONE"],
+        "activeIngredients": ["oxycodone 5 mg"],
+        "sections": [
+            {
+                "key": "drug_interactions",
+                "title": "Drug interactions",
+                "text": "Concomitant use with XANAX may increase respiratory depression.",
+            }
+        ],
+    }
+    with patch("medications.views.get_label", side_effect=[first, SECOND_LABEL]):
+        response = Client().post(
+            "/api/medications/interactions/check/",
+            json.dumps(
+                {
+                    "medications": [
+                        {"provider": "openfda", "externalId": LABEL_ID},
+                        {"provider": "openfda", "externalId": SECOND_LABEL["externalId"]},
+                    ]
+                }
+            ),
+            content_type="application/json",
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "label_match"
+    assert response.json()["findings"][0]["matchedTerm"] == "xanax"
+
+
+def test_interaction_check_rejects_invalid_pairs():
+    url = "/api/medications/interactions/check/"
+    assert Client().post(url, "{}", content_type="application/json").status_code == 400
+    assert (
+        Client()
+        .post(
+            url,
+            json.dumps(
+                {
+                    "medications": [
+                        {"provider": "openfda", "externalId": LABEL_ID},
+                        {"provider": "openfda", "externalId": LABEL_ID},
+                    ]
+                }
+            ),
+            content_type="application/json",
+        )
+        .status_code
+        == 400
+    )

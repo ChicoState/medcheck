@@ -8,6 +8,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
+from .interactions import check_label_pair
 from .models import Medication, SavedMedication
 from .provider import ProviderError, get_label, search_labels, source_url
 
@@ -187,6 +188,45 @@ def detail(request, provider, external_id):
         and SavedMedication.objects.filter(user=request.user, medication=medication).exists()
     )
     return JsonResponse(_details(medication, saved))
+
+
+@require_http_methods(["POST"])
+def interaction_check(request):
+    try:
+        content_length = int(request.META.get("CONTENT_LENGTH", "0"))
+    except (TypeError, ValueError):
+        content_length = 0
+    if content_length > 8192:
+        return _error("INVALID_INPUT", "Enter two valid medication labels.", 400)
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return _error("INVALID_INPUT", "Enter two valid medication labels.", 400)
+    medications = body.get("medications") if isinstance(body, dict) else None
+    if not isinstance(medications, list) or len(medications) != 2:
+        return _error("INVALID_INPUT", "Choose exactly two medication labels.", 400)
+    parsed = []
+    for item in medications:
+        if not isinstance(item, dict) or item.get("provider") != "openfda":
+            return _error("INVALID_INPUT", "Choose two valid openFDA labels.", 400)
+        try:
+            external_id = UUID(item.get("externalId"))
+        except (TypeError, ValueError, AttributeError):
+            return _error("INVALID_INPUT", "Choose two valid openFDA labels.", 400)
+        parsed.append(external_id)
+    if parsed[0] == parsed[1]:
+        return _error("INVALID_INPUT", "Choose two different medication labels.", 400)
+    try:
+        records = [_medication(external_id) for external_id in parsed]
+    except ProviderError as error:
+        return _provider_error(error)
+    if any(record is None for record in records):
+        return _error("NOT_FOUND", "One or more medication labels were not found.", 404)
+    first_record, second_record = records
+    if first_record is None or second_record is None:
+        return _error("NOT_FOUND", "One or more medication labels were not found.", 404)
+    labels = [_details(first_record, False), _details(second_record, False)]
+    return JsonResponse(check_label_pair(*labels))
 
 
 @require_http_methods(["GET", "POST"])
