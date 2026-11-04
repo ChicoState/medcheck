@@ -2,10 +2,12 @@
 
 ## Status
 
-MedCheck offers live openFDA drug-label search and detail pages. Signed-in users
-can save product labels to a private My Medication library and remove them later.
-The Django account API uses session authentication and CSRF protection. This is
-a reference tool, not personal medical advice or a medication regimen tracker.
+The repository has a minimal Django scaffold, a React/Vite landing-page
+prototype, a local PostgreSQL service, and pull-request checks. The landing page
+accepts a local search term but does not query medical information. The account
+API provides session-based registration, login, logout, CSRF protection, and
+current-user status. Authenticated users also have a persisted weekly
+medication schedule; schedule editing is not implemented yet.
 
 ## Repository map
 
@@ -15,9 +17,10 @@ a reference tool, not personal medical advice or a medication regimen tracker.
   readiness health check.
 - `scripts/docker-smoke.sh` — disposable PostgreSQL readiness and `SELECT 1`
   smoke test.
-- `backend/` — Django account and medication APIs, openFDA adapter, migrations,
-  locked dependencies, and tests.
-- `web/` — React/Vite search, detail, and saved-library pages with browser tests.
+- `backend/` — Django project scaffold, account and medication schedule APIs,
+  Python/Django tooling, locked dependencies, migrations, and tests.
+- `web/` — React/Vite landing-page prototype, locked dependencies,
+  infrastructure probes, and Playwright browser tests.
 - `.github/workflows/pr-checks.yml` — secret scanning plus backend and web
   quality checks, including the web build and Playwright tests.
 - `.github/dependabot.yml` — weekly dependency-update configuration.
@@ -88,7 +91,7 @@ a reference tool, not personal medical advice or a medication regimen tracker.
    foundation:
 
    ```bash
-   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=accounts --cov=medications && uv run bandit --quiet --recursive accounts config medications)
+   (cd backend && uv run python manage.py check && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts medications config)
    (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
    ./scripts/docker-smoke.sh
    docker compose down --volumes

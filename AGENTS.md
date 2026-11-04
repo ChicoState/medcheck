@@ -3,9 +3,12 @@
 ## Current status
 
 `infrastructure_plan.md` is the source of truth for architectural decisions. The
-web tooling, Playwright tests, Docker foundation, Django session-based account
-API, live openFDA label search, and private saved-medication library are in place.
-Do not expand product behavior while performing infrastructure work.
+web tooling, MedCheck landing-page prototype, Playwright tests, Docker
+foundation, minimal Django project scaffold, session-based account API, and
+account-owned weekly medication schedule persistence are in place. The landing
+page only echoes a local search term; medical search and schedule editing are
+not implemented. Do not expand product behavior while performing
+infrastructure work.
 
 ## Repository map
 
@@ -14,15 +17,17 @@ Do not expand product behavior while performing infrastructure work.
 - `docker/backend.Dockerfile`, `docker-compose.yml`, and `.dockerignore` —
   Docker tooling and local PostgreSQL only.
 - `scripts/docker-smoke.sh` — infrastructure-owned smoke test.
-- `scripts/dev.sh` — starts local Django and Vite together.
-- `backend/` — Django accounts, medications app, openFDA adapter, PostgreSQL
-  configuration, Python tooling, and tests.
-- `web/` — React/Vite search, detail, account, and saved-library UI with
-  Playwright tests. Vite proxies `/api` to Django on port 8000.
+- `scripts/dev.sh` — starts local Django and Vite together for account UI work.
+- `backend/` — Django project scaffold, account API, medication schedule API,
+  Python dependency/tool configuration, migrations, and tests.
+- `web/` — React/Vite entrypoint, dependency/tool configuration, and
+  the landing-page prototype, account forms, and My Medication navigation with
+  infrastructure and Playwright tests. Vite proxies `/api` to Django on port 8000.
 - `.github/workflows/pr-checks.yml` — secret, backend, web, build, and browser
   pull-request quality checks.
 - `.github/workflows/release.yml` — not created; it requires a selected hosting provider.
-- `docs/specs/` — application and setup specifications.
+- `docs/specs/` — application and setup specifications; `docs/decisions/` holds
+  durable architecture decisions.
 - `.agents/skills/` — project-specific skills and instructions.
 
 ## Required reading and skill selection
@@ -53,7 +58,7 @@ For Docker changes, run:
 docker build --file docker/backend.Dockerfile --tag medcheck-backend-tooling .
 docker compose config --quiet
 ./scripts/docker-smoke.sh
-(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=accounts --cov=medications && uv run bandit --quiet --recursive accounts config medications)
+(cd backend && uv run ruff format --check . && uv run ruff check . && uv run pyright && uv run pytest --cov=tests && uv run bandit --quiet --recursive accounts medications config)
 (cd backend && set -a && source ../.env.example && set +a && uv run python manage.py check)
 (cd web && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e)
 git diff --check

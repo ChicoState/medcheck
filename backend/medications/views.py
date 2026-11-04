@@ -1,6 +1,7 @@
 import hashlib
 import json
 from datetime import date, timedelta
+from functools import wraps
 from uuid import UUID
 
 from django.core.cache import cache
@@ -11,6 +12,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from .interactions import check_label_pair
 from .models import Medication, SavedMedication
 from .provider import ProviderError, get_label, search_labels, source_url
+from .services import get_or_create_schedule, serialize_schedule
 
 FRESH_FOR = timedelta(hours=24)
 
@@ -114,9 +116,7 @@ def _medication(external_id):
         if existing:
             return existing
         raise
-    if label is None:
-        return existing
-    return _save_label(label)
+    return existing if label is None else _save_label(label)
 
 
 @require_GET
@@ -192,10 +192,7 @@ def detail(request, provider, external_id):
 
 @require_http_methods(["POST"])
 def interaction_check(request):
-    try:
-        content_length = int(request.META.get("CONTENT_LENGTH", "0"))
-    except (TypeError, ValueError):
-        content_length = 0
+    content_length = int(request.META.get("CONTENT_LENGTH", 0) or 0)
     if content_length > 8192:
         return _error("INVALID_INPUT", "Enter two valid medication labels.", 400)
     try:
@@ -210,23 +207,18 @@ def interaction_check(request):
         if not isinstance(item, dict) or item.get("provider") != "openfda":
             return _error("INVALID_INPUT", "Choose two valid openFDA labels.", 400)
         try:
-            external_id = UUID(item.get("externalId"))
+            parsed.append(UUID(item.get("externalId")))
         except (TypeError, ValueError, AttributeError):
             return _error("INVALID_INPUT", "Choose two valid openFDA labels.", 400)
-        parsed.append(external_id)
     if parsed[0] == parsed[1]:
         return _error("INVALID_INPUT", "Choose two different medication labels.", 400)
     try:
-        records = [_medication(external_id) for external_id in parsed]
+        labels = [_medication(external_id) for external_id in parsed]
     except ProviderError as error:
         return _provider_error(error)
-    if any(record is None for record in records):
+    if any(label is None for label in labels):
         return _error("NOT_FOUND", "One or more medication labels were not found.", 404)
-    first_record, second_record = records
-    if first_record is None or second_record is None:
-        return _error("NOT_FOUND", "One or more medication labels were not found.", 404)
-    labels = [_details(first_record, False), _details(second_record, False)]
-    return JsonResponse(check_label_pair(*labels))
+    return JsonResponse(check_label_pair(*[_details(label, False) for label in labels]))
 
 
 @require_http_methods(["GET", "POST"])
@@ -260,13 +252,14 @@ def saved_collection(request):
         return JsonResponse({"data": data, "pagination": _pagination(page, size, total)})
     try:
         body = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return _error("INVALID_INPUT", "Enter a valid medication label.", 400)
-    if not isinstance(body, dict) or body.get("provider") != "openfda":
-        return _error("INVALID_INPUT", "Enter a valid medication label.", 400)
-    try:
-        external_id = UUID(body.get("externalId"))
-    except (TypeError, ValueError, AttributeError):
+        external_id = (
+            UUID(body.get("externalId"))
+            if isinstance(body, dict) and body.get("provider") == "openfda"
+            else None
+        )
+    except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError, AttributeError):
+        external_id = None
+    if external_id is None:
         return _error("INVALID_INPUT", "Enter a valid medication label.", 400)
     try:
         medication = _medication(external_id)
@@ -283,6 +276,27 @@ def saved_item(request, saved_id):
     if not request.user.is_authenticated:
         return _error("AUTH_REQUIRED", "Sign in to update saved medications.", 401)
     deleted, _ = SavedMedication.objects.filter(pk=saved_id, user=request.user).delete()
-    if not deleted:
-        return _error("NOT_FOUND", "Saved medication not found.", 404)
-    return HttpResponse(status=204)
+    return (
+        HttpResponse(status=204)
+        if deleted
+        else _error("NOT_FOUND", "Saved medication not found.", 404)
+    )
+
+
+def authenticated_api(view):
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {"detail": "Authentication credentials were not provided."}, status=401
+            )
+        return view(request, *args, **kwargs)
+
+    return wrapped
+
+
+@require_GET
+@authenticated_api
+def schedule(request):
+    medication_schedule = get_or_create_schedule(request.user)
+    return JsonResponse({"schedule": serialize_schedule(medication_schedule)})

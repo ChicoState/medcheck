@@ -23,10 +23,14 @@ test("real Django account creation, session restoration, logout and login", asyn
   await expect(page.locator("#account-panel")).toHaveCount(0);
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("link", { name: "My Medication" }).click();
+  await page.getByRole("button", { name: /Wednesday/ }).click();
+  await expect(page.getByText("Atorvastatin")).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "My Medication" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: /Wednesday/ }).click();
+  await expect(page.getByText("Atorvastatin")).toBeVisible();
   await page.getByRole("button", { name: "Account", exact: true }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL("/");
