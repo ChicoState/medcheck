@@ -157,3 +157,109 @@ test("shows provider errors without losing the search form", async ({
     page.getByRole("searchbox", { name: "Medication name" }),
   ).toBeVisible();
 });
+
+test("screens every saved medication pair and preserves partial results", async ({
+  page,
+}) => {
+  const medicines = [
+    medicine,
+    { ...medicine, externalId: "second-label", displayName: "Aspirin" },
+    { ...medicine, externalId: "third-label", displayName: "Third medicine" },
+  ].map((item, index) => ({
+    ...item,
+    savedId: index + 1,
+    savedAt: "2026-10-19T00:00:00Z",
+    labelEffectiveDate: null,
+    isStale: false,
+  }));
+  let removed = false;
+  const pairs: string[][] = [];
+
+  await page.route("**/api/auth/me/", (route) =>
+    route.fulfill({
+      json: { user: { id: 1, email: "member@example.com" } },
+    }),
+  );
+  await page.route("**/api/saved-medications/**", (route) => {
+    if (route.request().method() === "DELETE") {
+      removed = true;
+      return route.fulfill({ status: 204, body: "" });
+    }
+    const pageNumber = Number(
+      new URL(route.request().url()).searchParams.get("page"),
+    );
+    return route.fulfill({
+      json: {
+        data:
+          pageNumber === 1
+            ? medicines
+                .slice(0, 2)
+                .filter((item) => !removed || item.savedId !== 1)
+            : medicines.slice(2),
+        pagination: {
+          page: pageNumber,
+          pageSize: 2,
+          hasNextPage: pageNumber === 1,
+        },
+      },
+    });
+  });
+  await page.route("**/api/medications/interactions/check/", (route) => {
+    const ids = route
+      .request()
+      .postDataJSON()
+      .medications.map((item: { externalId: string }) => item.externalId);
+    pairs.push(ids);
+    if (ids.includes("third-label") && ids.includes(medicine.externalId)) {
+      return route.fulfill({
+        status: 503,
+        json: { error: { message: "Provider unavailable." } },
+      });
+    }
+    return route.fulfill({
+      json: {
+        status: ids.includes(medicine.externalId)
+          ? "label_match"
+          : "no_label_match",
+        medications: [],
+        findings: ids.includes(medicine.externalId)
+          ? [
+              {
+                sourceMedication: medicine.displayName,
+                targetMedication: "Aspirin",
+                matchedTerm: "aspirin",
+                text: "Consult a pharmacist about aspirin.",
+                sourceUrl: "https://api.fda.gov/drug/label.json",
+                labelEffectiveDate: null,
+                datasetUpdatedAt: null,
+              },
+            ]
+          : [],
+        disclaimer: "No match does not prove safety.",
+      },
+    });
+  });
+
+  await page.goto("/my-medication");
+  await expect(
+    page.getByText("Screening finished. 2 of 3 pairs checked successfully."),
+  ).toBeVisible();
+  expect(pairs).toHaveLength(3);
+  await expect(
+    page.getByText("Consult a pharmacist about aspirin."),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Provider unavailable.");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: "Third medicine" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Previous", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Remove", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Confirm remove" }).click();
+  await expect(
+    page.getByText("Screening finished. 1 of 1 pairs checked successfully."),
+  ).toBeVisible();
+});
