@@ -46,18 +46,37 @@ test("accounts unlock My Medication and survive reload until sign out", async ({
               time: "9:00 PM",
               food: "without food",
             },
-            {
-              id: 2,
-              name: "Lisinopril",
-              time: "8:30 AM",
-              food: "without food",
-            },
           ],
           Thursday: [],
           Friday: [],
           Saturday: [],
           Sunday: [],
         },
+      },
+    });
+  });
+  await page.route("**/api/saved-medications/**", async (route) => {
+    expect(route.request().method()).toBe("GET");
+    await route.fulfill({
+      json: {
+        data: [
+          {
+            provider: "openfda",
+            externalId: "00653b7c-7099-487e-9a01-e89781c21323",
+            displayName: "Atorvastatin",
+            genericName: "ATORVASTATIN",
+            brandNames: [],
+            activeIngredients: [],
+            dosageForms: [],
+            routes: [],
+            rxcui: null,
+            savedId: 1,
+            savedAt: "2026-10-19T00:00:00Z",
+            labelEffectiveDate: null,
+            isStale: false,
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, hasNextPage: false },
       },
     });
   });
@@ -94,9 +113,10 @@ test("accounts unlock My Medication and survive reload until sign out", async ({
   await expect(
     page.getByRole("heading", { name: /Wednesday's medicines/ }),
   ).toBeVisible();
-  await expect(page.getByText("Atorvastatin")).toBeVisible();
+  await expect(page.locator(".dose-card strong")).toHaveText("Atorvastatin");
   await expect(page.getByText("9:00 PM")).toBeVisible();
-  await expect(page.getByText("Take without food")).toHaveCount(2);
+  await expect(page.getByText("Take without food")).toHaveCount(1);
+  await expect(page.getByText("Lisinopril")).toHaveCount(0);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "My Medication" }),

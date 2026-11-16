@@ -2,7 +2,7 @@ from datetime import time
 
 from django.db import transaction
 
-from .models import MedicationDose, MedicationSchedule
+from .models import MedicationDose, MedicationSchedule, SavedMedication
 
 DAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
@@ -43,9 +43,12 @@ def get_or_create_schedule(user):
     return schedule
 
 
-def serialize_schedule(schedule):
+def serialize_schedule(schedule, saved_medication_names):
     schedule_by_day = {day: [] for day in DAY_NAMES}
+    saved_names = {name.casefold() for name in saved_medication_names}
     for dose in schedule.doses.all():
+        if dose.medication_name.casefold() not in saved_names:
+            continue
         schedule_by_day[DAY_NAMES[dose.day_of_week]].append(
             {
                 "id": dose.pk,
@@ -55,3 +58,11 @@ def serialize_schedule(schedule):
             }
         )
     return schedule_by_day
+
+
+def serialize_account_schedule(user):
+    schedule = get_or_create_schedule(user)
+    saved_names = SavedMedication.objects.filter(user=user).values_list(
+        "medication__display_name", flat=True
+    )
+    return serialize_schedule(schedule, saved_names)

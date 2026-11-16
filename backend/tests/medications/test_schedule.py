@@ -4,8 +4,9 @@ from typing import Any
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
+from django.utils import timezone
 
-from medications.models import MedicationDose, MedicationSchedule
+from medications.models import Medication, MedicationDose, MedicationSchedule, SavedMedication
 
 pytestmark = pytest.mark.django_db
 
@@ -21,6 +22,16 @@ def login_client(email: str) -> Any:
     return client, user
 
 
+def save_medication(user: Any, name: str, external_id: str) -> None:
+    medication = Medication.objects.create(
+        provider="openfda",
+        external_id=external_id,
+        display_name=name,
+        fetched_at=timezone.now(),
+    )
+    SavedMedication.objects.create(user=user, medication=medication)
+
+
 def test_schedule_requires_authentication():
     client: Any = Client()
     response = client.get("/api/medications/schedule/")
@@ -29,8 +40,10 @@ def test_schedule_requires_authentication():
     assert MedicationSchedule.objects.count() == 0  # pyright: ignore[reportAttributeAccessIssue]
 
 
-def test_first_schedule_read_seeds_and_persists_the_account_schedule():
+def test_schedule_only_returns_doses_for_the_account_saved_medications():
     client, user = login_client("member@example.com")
+    save_medication(user, "Vitamin D", "00653b7c-7099-487e-9a01-e89781c21323")
+    save_medication(user, "Atorvastatin", "10653b7c-7099-487e-9a01-e89781c21323")
 
     first_response = client.get("/api/medications/schedule/")
     second_response = client.get("/api/medications/schedule/")
@@ -49,12 +62,20 @@ def test_first_schedule_read_seeds_and_persists_the_account_schedule():
         ).count()
         == 12
     )
-    assert first_response.json()["schedule"]["Wednesday"][2]["name"] == "Atorvastatin"
+    assert first_response.json()["schedule"]["Wednesday"][1]["name"] == "Atorvastatin"
+    visible_names = {
+        dose["name"]
+        for doses in first_response.json()["schedule"].values()
+        for dose in doses
+    }
+    assert visible_names == {"Vitamin D", "Atorvastatin"}
 
 
 def test_schedules_are_isolated_between_users():
     first_client, first_user = login_client("first@example.com")
     second_client, second_user = login_client("second@example.com")
+    save_medication(first_user, "Vitamin D", "20653b7c-7099-487e-9a01-e89781c21323")
+    save_medication(second_user, "Lisinopril", "30653b7c-7099-487e-9a01-e89781c21323")
 
     first_client.get("/api/medications/schedule/")
     second_client.get("/api/medications/schedule/")
@@ -65,17 +86,18 @@ def test_schedules_are_isolated_between_users():
     assert MedicationSchedule.objects.filter(  # pyright: ignore[reportAttributeAccessIssue]
         user=second_user
     ).exists()
-    first_ids = {
-        dose["id"]
+    first_names = {
+        dose["name"]
         for doses in first_client.get("/api/medications/schedule/").json()["schedule"].values()
         for dose in doses
     }
-    second_ids = {
-        dose["id"]
+    second_names = {
+        dose["name"]
         for doses in second_client.get("/api/medications/schedule/").json()["schedule"].values()
         for dose in doses
     }
-    assert first_ids.isdisjoint(second_ids)
+    assert first_names == {"Vitamin D"}
+    assert second_names == {"Lisinopril"}
 
 
 def test_schedule_endpoint_rejects_non_get_requests():

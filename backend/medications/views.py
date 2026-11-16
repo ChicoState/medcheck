@@ -12,7 +12,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from .interactions import check_label_pair
 from .models import Medication, SavedMedication
 from .provider import ProviderError, get_label, search_labels, source_url
-from .services import get_or_create_schedule, serialize_schedule
+from .services import serialize_account_schedule
 
 FRESH_FOR = timedelta(hours=24)
 
@@ -298,5 +298,4 @@ def authenticated_api(view):
 @require_GET
 @authenticated_api
 def schedule(request):
-    medication_schedule = get_or_create_schedule(request.user)
-    return JsonResponse({"schedule": serialize_schedule(medication_schedule)})
+    return JsonResponse({"schedule": serialize_account_schedule(request.user)})
