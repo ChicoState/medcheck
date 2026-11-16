@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const id = "00653b7c-7099-487e-9a01-e89781c21323";
 const medicine = {
