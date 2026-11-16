@@ -64,9 +64,7 @@ def test_schedule_only_returns_doses_for_the_account_saved_medications():
     )
     assert first_response.json()["schedule"]["Wednesday"][1]["name"] == "Atorvastatin"
     visible_names = {
-        dose["name"]
-        for doses in first_response.json()["schedule"].values()
-        for dose in doses
+        dose["name"] for doses in first_response.json()["schedule"].values() for dose in doses
     }
     assert visible_names == {"Vitamin D", "Atorvastatin"}
 
