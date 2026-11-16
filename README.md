@@ -8,6 +8,8 @@ accepts a local search term but does not query medical information. The account
 API provides session-based registration, login, logout, CSRF protection, and
 current-user status. Authenticated users also have a persisted weekly
 medication schedule; schedule editing is not implemented yet.
+Authenticated users can also opt into email reminders for medication doses,
+vitamins, and manually entered prescription refill dates.
 
 ## Repository map
 
@@ -86,6 +88,18 @@ medication schedule; schedule editing is not implemented yet.
    in your untracked `.env` before starting the script. Set `OPENFDA_API_KEY`
    there as well for live provider use; a key is optional for a limited local
    trial but required before public deployment. Do not commit these values.
+
+   Configure a production Django email backend with deployment secrets, then
+   run the notification command every minute from cron or the hosting
+   provider's scheduled-job facility:
+
+   ```bash
+   (cd backend && uv run python manage.py send_medication_notifications)
+   ```
+
+   The command sends dose and vitamin reminders one hour before scheduled
+   doses, and refill reminders seven days before the due date entered by the
+   user. It is safe to retry the same minute without duplicating emails.
 
 7. Run the available backend, web, and browser checks, then clean up the Docker
    foundation:

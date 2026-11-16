@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .interactions import check_label_pair
-from .models import Medication, SavedMedication
+from .models import Medication, NotificationSettings, RefillReminder, SavedMedication
 from .provider import ProviderError, get_label, search_labels, source_url
 from .services import serialize_account_schedule
 
@@ -299,3 +299,78 @@ def authenticated_api(view):
 @authenticated_api
 def schedule(request):
     return JsonResponse({"schedule": serialize_account_schedule(request.user)})
+
+
+def _notification_settings_data(settings):
+    return {
+        "doseReminders": settings.dose_reminders,
+        "vitaminReminders": settings.vitamin_reminders,
+        "refillReminders": settings.refill_reminders,
+    }
+
+
+@require_http_methods(["GET", "PATCH"])
+@authenticated_api
+def notification_settings(request):
+    notification_settings, _ = NotificationSettings.objects.get_or_create(user=request.user)
+    if request.method == "GET":
+        return JsonResponse(_notification_settings_data(notification_settings))
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return _error("INVALID_INPUT", "Enter notification settings as JSON.", 400)
+    if not isinstance(body, dict):
+        return _error("INVALID_INPUT", "Enter notification settings as JSON.", 400)
+    fields = {
+        "doseReminders": "dose_reminders",
+        "vitaminReminders": "vitamin_reminders",
+        "refillReminders": "refill_reminders",
+    }
+    for key, field in fields.items():
+        if key in body and not isinstance(body[key], bool):
+            return _error("INVALID_INPUT", f"{key} must be a boolean.", 400)
+        if key in body:
+            setattr(notification_settings, field, body[key])
+    notification_settings.save(update_fields=list(fields.values()))
+    return JsonResponse(_notification_settings_data(notification_settings))
+
+
+@require_http_methods(["GET", "POST"])
+@authenticated_api
+def refills(request):
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "data": [
+                    {"id": item.pk, "name": item.name, "dueDate": item.due_date.isoformat()}
+                    for item in RefillReminder.objects.filter(user=request.user)
+                ]
+            }
+        )
+    try:
+        body = json.loads(request.body)
+        name = body.get("name", "").strip() if isinstance(body, dict) else ""
+        due_date = date.fromisoformat(body.get("dueDate", "")) if isinstance(body, dict) else None
+    except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError, AttributeError):
+        name, due_date = "", None
+    if not name or len(name) > 200 or due_date is None:
+        return _error("INVALID_INPUT", "Enter a medication name and valid refill date.", 400)
+    item, created = RefillReminder.objects.get_or_create(
+        user=request.user, name=name, due_date=due_date
+    )
+    return JsonResponse(
+        {
+            "id": item.pk,
+            "name": item.name,
+            "dueDate": item.due_date.isoformat(),
+            "created": created,
+        },
+        status=201 if created else 200,
+    )
+
+
+@require_http_methods(["DELETE"])
+@authenticated_api
+def refill_item(request, refill_id):
+    deleted, _ = RefillReminder.objects.filter(pk=refill_id, user=request.user).delete()
+    return HttpResponse(status=204) if deleted else _error("NOT_FOUND", "Refill not found.", 404)

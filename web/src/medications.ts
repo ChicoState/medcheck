@@ -200,3 +200,54 @@ export async function currentMedicationSchedule(): Promise<MedicationSchedule> {
   }
   return data.schedule;
 }
+
+export type NotificationSettings = {
+  doseReminders: boolean;
+  vitaminReminders: boolean;
+  refillReminders: boolean;
+};
+
+export type RefillReminder = {
+  id: number;
+  name: string;
+  dueDate: string;
+};
+
+export async function notificationSettings(): Promise<NotificationSettings> {
+  return request("/api/notifications/settings/");
+}
+
+export async function updateNotificationSettings(
+  values: Partial<NotificationSettings>,
+): Promise<NotificationSettings> {
+  const token = await csrfToken();
+  return request("/api/notifications/settings/", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": token },
+    body: JSON.stringify(values),
+  });
+}
+
+export async function refillReminders(): Promise<{ data: RefillReminder[] }> {
+  return request("/api/notifications/refills/");
+}
+
+export async function addRefillReminder(
+  name: string,
+  dueDate: string,
+): Promise<RefillReminder> {
+  const token = await csrfToken();
+  return request("/api/notifications/refills/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": token },
+    body: JSON.stringify({ name, dueDate }),
+  });
+}
+
+export async function removeRefillReminder(id: number): Promise<void> {
+  const token = await csrfToken();
+  await request(`/api/notifications/refills/${id}/`, {
+    method: "DELETE",
+    headers: { "X-CSRFToken": token },
+  });
+}

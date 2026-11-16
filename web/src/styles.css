@@ -616,6 +616,75 @@ h1 {
   border-top: 1px solid #c7d2ca;
 }
 
+.notification-panel {
+  margin-top: 3.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid #c7d2ca;
+}
+
+.notification-panel h2 {
+  margin: 0;
+  color: #1d332b;
+}
+
+.notification-options {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.notification-options label {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.refill-form {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 30rem;
+  margin-top: 2rem;
+}
+
+.refill-form input {
+  min-height: 2.5rem;
+  border: 1px solid #c7d2ca;
+  border-radius: 0.4rem;
+  padding: 0.5rem;
+  background: #fffefa;
+  color: #1d332b;
+}
+
+.refill-form button,
+.refill-list button {
+  width: fit-content;
+  border: 1px solid #6c9a7d;
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  background: #fffefa;
+  color: #24563f;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.refill-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.refill-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #c7d2ca;
+}
+
 .organizer-heading {
   display: flex;
   align-items: end;

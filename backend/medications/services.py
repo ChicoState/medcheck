@@ -36,6 +36,11 @@ def get_or_create_schedule(user):
                     medication_name=name,
                     time=dose_time,
                     with_food=with_food,
+                    category=(
+                        MedicationDose.Category.VITAMIN
+                        if name.casefold().startswith("vitamin")
+                        else MedicationDose.Category.MEDICATION
+                    ),
                 )
                 for day, name, dose_time, with_food in DEFAULT_DOSES
             ]

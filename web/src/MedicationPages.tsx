@@ -14,12 +14,19 @@ import {
   SavedMedication,
   MedicationSchedule,
   currentMedicationSchedule,
+  addRefillReminder,
   medicationDetail,
   removeMedication,
   saveMedication,
   savedMedications,
   checkInteractions,
   searchMedications,
+  notificationSettings,
+  refillReminders,
+  removeRefillReminder,
+  updateNotificationSettings,
+  NotificationSettings,
+  RefillReminder,
 } from "./medications";
 
 function message(error: unknown) {
@@ -123,6 +130,138 @@ function WeeklyOrganizer() {
           </p>
         )}
       </div>
+    </section>
+  );
+}
+
+function NotificationPanel() {
+  const [settings, setSettings] = useState<NotificationSettings | null>(null);
+  const [refills, setRefills] = useState<RefillReminder[]>([]);
+  const [name, setName] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    Promise.all([notificationSettings(), refillReminders()]).then(
+      ([nextSettings, nextRefills]) => {
+        setSettings(nextSettings);
+        setRefills(nextRefills.data);
+      },
+      (reason) => setError(message(reason)),
+    );
+  }, []);
+
+  async function toggle(key: keyof NotificationSettings, value: boolean) {
+    try {
+      setSettings((current) => current && { ...current, [key]: value });
+      setSaved(false);
+      const next = await updateNotificationSettings({ [key]: value });
+      setSettings(next);
+      setSaved(true);
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function addRefill(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      const refill = await addRefillReminder(name.trim(), dueDate);
+      setRefills((current) =>
+        [...current, refill].sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
+      );
+      setName("");
+      setDueDate("");
+      setError("");
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  async function removeRefill(id: number) {
+    try {
+      await removeRefillReminder(id);
+      setRefills((current) => current.filter((refill) => refill.id !== id));
+    } catch (reason) {
+      setError(message(reason));
+    }
+  }
+
+  return (
+    <section
+      className="notification-panel"
+      aria-labelledby="notification-title"
+    >
+      <p className="section-label">Stay on track</p>
+      <h2 id="notification-title">Email reminders</h2>
+      <p className="page-note">
+        Dose and vitamin reminders arrive one hour before the scheduled time.
+        Refill reminders arrive seven days before the date you enter.
+      </p>
+      {error && (
+        <p className="page-error" role="alert">
+          {error}
+        </p>
+      )}
+      {settings && (
+        <div className="notification-options">
+          {(
+            [
+              ["doseReminders", "Medication dose reminders"],
+              ["vitaminReminders", "Vitamin reminders"],
+              ["refillReminders", "Prescription refill reminders"],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={settings[key]}
+                onChange={(event) => toggle(key, event.target.checked)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      )}
+      {saved && <p role="status">Reminder settings saved.</p>}
+      <form className="refill-form" onSubmit={addRefill}>
+        <label htmlFor="refill-name">Medication</label>
+        <input
+          id="refill-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={200}
+          required
+        />
+        <label htmlFor="refill-date">Refill due date</label>
+        <input
+          id="refill-date"
+          type="date"
+          value={dueDate}
+          onChange={(event) => setDueDate(event.target.value)}
+          required
+        />
+        <button type="submit">Add refill reminder</button>
+      </form>
+      {refills.length > 0 && (
+        <ul className="refill-list">
+          {refills.map((refill) => (
+            <li key={refill.id}>
+              <span>
+                <strong>{refill.name}</strong> · due {refill.dueDate}
+              </span>
+              <button type="button" onClick={() => removeRefill(refill.id)}>
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="medical-notice">
+        Reminders are informational only. Follow your clinician&apos;s
+        instructions and confirm refills with your pharmacy.
+      </p>
     </section>
   );
 }
@@ -692,6 +831,7 @@ export function SavedPage() {
           </div>
         ))}
       <WeeklyOrganizer />
+      <NotificationPanel />
     </section>
   );
 }
