@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 52" fill="none">
+  <defs><linearGradient id="tablet" x1="15" y1="10" x2="60" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#f9d4bc"/><stop offset=".55" stop-color="#e8a78b"/><stop offset="1" stop-color="#ce826d"/></linearGradient></defs>
+  <ellipse cx="38" cy="45" rx="27" ry="5" fill="#294a3b" opacity=".13"/><g transform="rotate(17 38 25)"><rect x="9" y="9" width="58" height="32" rx="16" fill="url(#tablet)" stroke="#bf7964" stroke-width="1.5"/><path d="M20 16c7-4 24-4 34 0" stroke="#fff" stroke-opacity=".52" stroke-width="2" stroke-linecap="round"/></g>
+</svg>

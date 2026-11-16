@@ -19,6 +19,8 @@ test("search, inspect, sign in, save, review, and remove a label", async ({
 }) => {
   let signedIn = false;
   let saved = false;
+  let schedulePlan: { days: number[]; period: string; time: string } | null =
+    null;
   const user = {
     id: 1,
     email: "member@example.com",
@@ -97,10 +99,62 @@ test("search, inspect, sign in, save, review, and remove a label", async ({
                 savedAt: "2026-10-19T00:00:00Z",
                 labelEffectiveDate: "2026-04-29",
                 isStale: false,
+                schedulePlan,
               },
             ]
           : [],
         pagination,
+      },
+    });
+  });
+  await page.route("**/api/saved-medications/interactions/", (route) =>
+    route.fulfill({
+      json: {
+        status: "incomplete",
+        pairsChecked: 0,
+        totalPairs: 0,
+        matches: [],
+        reason: "need_two",
+      },
+    }),
+  );
+  await page.route("**/api/medications/schedule/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/1/")) {
+      if (route.request().method() === "DELETE") {
+        schedulePlan = null;
+        return route.fulfill({ status: 204, body: "" });
+      }
+      schedulePlan = route.request().postDataJSON();
+      return route.fulfill({ json: schedulePlan });
+    }
+    const names = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+    return route.fulfill({
+      json: {
+        schedule: Object.fromEntries(
+          names.map((name, day) => [
+            name,
+            schedulePlan?.days.includes(day)
+              ? [
+                  {
+                    id: day + 1,
+                    name: medicine.displayName,
+                    time: schedulePlan.time === "13:00" ? "1:00 PM" : "8:00 AM",
+                    period: schedulePlan.period,
+                    food: null,
+                  },
+                ]
+              : [],
+          ]),
+        ),
       },
     });
   });
@@ -124,10 +178,50 @@ test("search, inspect, sign in, save, review, and remove a label", async ({
   await expect(
     page.getByRole("link", { name: "Ibuprofen Dye Free" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Add another medicine to check pairs."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Schedule", exact: true }).click();
+  await page.getByRole("button", { name: "Fri", exact: true }).click();
+  await page.getByRole("button", { name: "Sat", exact: true }).click();
+  await page.getByRole("button", { name: "Sun", exact: true }).click();
+  await page.getByRole("button", { name: "afternoon", exact: true }).click();
+  await expect(page.getByLabel("Exact time")).toHaveValue("13:00");
+  await page.getByRole("button", { name: "Add to pill case" }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit schedule" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Monday/ }).click();
+  await expect(page.locator(".organizer-details")).toContainText(
+    "Ibuprofen Dye Free",
+  );
+  await expect(page.locator(".organizer-details")).toContainText(
+    "afternoon · 1:00 PM",
+  );
+  await page.getByRole("button", { name: /Saturday/ }).click();
+  await expect(page.locator(".organizer-details")).toContainText(
+    "Ibuprofen Dye Free",
+  );
+  await page.getByRole("button", { name: /Sunday/ }).click();
+  await expect(page.locator(".organizer-details")).toContainText(
+    "Ibuprofen Dye Free",
+  );
   await page.reload();
   await expect(
     page.getByRole("link", { name: "Ibuprofen Dye Free" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Edit schedule" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Edit schedule" }).click();
+  await expect(page.getByLabel("Exact time")).toHaveValue("13:00");
+  await page.getByRole("button", { name: "Remove schedule" }).click();
+  await expect(
+    page.getByRole("button", { name: "Schedule", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".organizer-details")).not.toContainText(
+    "Ibuprofen Dye Free",
+  );
   await page.getByRole("button", { name: "Remove" }).click();
   await page.getByRole("button", { name: "Confirm remove" }).click();
   await expect(
@@ -158,7 +252,7 @@ test("shows provider errors without losing the search form", async ({
   ).toBeVisible();
 });
 
-test("automatically checks the full library, keeps partial results, and rechecks after removal", async ({
+test("My Medication paginates and refreshes its label check after removal", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -206,58 +300,38 @@ test("automatically checks the full library, keeps partial results, and rechecks
       },
     });
   });
-  const pairs: string[][] = [];
-  await page.route("**/api/medications/interactions/check/", async (route) => {
-    const ids = route
-      .request()
-      .postDataJSON()
-      .medications.map((item: { externalId: string }) => item.externalId);
-    pairs.push(ids);
-    if (ids.includes("third-label") && ids.includes(medicine.externalId))
-      return route.fulfill({
-        status: 503,
-        json: { error: { message: "Provider unavailable." } },
-      });
-    const matched = ids.includes(medicine.externalId);
-    return route.fulfill({
+  await page.route("**/api/saved-medications/interactions/", (route) =>
+    route.fulfill({
       json: {
-        status: matched ? "label_match" : "no_label_match",
-        medications: [],
-        findings: matched
-          ? [
-              {
-                sourceMedication: medicine.displayName,
-                targetMedication: "Aspirin",
-                matchedTerm: "aspirin",
-                text: "Consult a pharmacist about aspirin.",
-                sourceUrl: "https://api.fda.gov/drug/label.json",
-                labelEffectiveDate: null,
-                datasetUpdatedAt: null,
-              },
-            ]
-          : [],
-        disclaimer: "No match does not prove safety.",
+        status: "clear",
+        pairsChecked: removed ? 1 : 3,
+        totalPairs: removed ? 1 : 3,
+        matches: [],
+        reason: null,
       },
-    });
+    }),
+  );
+  let interactionRequests = 0;
+  await page.route("**/api/medications/interactions/check/", (route) => {
+    interactionRequests += 1;
+    return route.abort();
   });
   await page.goto("/my-medication");
   await expect(
-    page.getByText("Screening finished. 2 of 3 pairs checked successfully."),
+    page.getByRole("link", { name: "Ibuprofen Dye Free" }),
   ).toBeVisible();
-  expect(pairs).toHaveLength(3);
+  await expect(
+    page.getByText("No interaction text found in 3 checked pairs."),
+  ).toBeVisible();
   await expect(page.getByRole("checkbox")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Check labels" })).toHaveCount(
     0,
   );
-  await expect(
-    page.getByText("Consult a pharmacist about aspirin."),
-  ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("Provider unavailable.");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(
     page.getByRole("link", { name: "Third medicine" }),
   ).toBeVisible();
-  expect(pairs).toHaveLength(3);
+  expect(interactionRequests).toBe(0);
   await page.getByRole("button", { name: "Previous", exact: true }).click();
   await page
     .getByRole("button", { name: "Remove", exact: true })
@@ -265,12 +339,73 @@ test("automatically checks the full library, keeps partial results, and rechecks
     .click();
   await page.getByRole("button", { name: "Confirm remove" }).click();
   await expect(
-    page.getByText("Screening finished. 1 of 1 pairs checked successfully."),
+    page.getByText("No interaction text found in 1 checked pair."),
   ).toBeVisible();
   await expect(
-    page.getByText("Consult a pharmacist about aspirin."),
+    page.getByRole("link", { name: "Ibuprofen Dye Free" }),
   ).toHaveCount(0);
+  expect(interactionRequests).toBe(0);
   expect(errors).toEqual([]);
+});
+
+test("saved interaction card shows matched sources and partial checks", async ({
+  page,
+}) => {
+  await page.route("**/api/auth/**", (route) =>
+    route.fulfill({ json: { user: { id: 1, email: "member@example.com" } } }),
+  );
+  await page.route("**/api/saved-medications/?**", (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            ...medicine,
+            savedId: 1,
+            savedAt: "2026-10-19",
+            labelEffectiveDate: null,
+            isStale: false,
+          },
+        ],
+        pagination,
+      },
+    }),
+  );
+  await page.route("**/api/saved-medications/interactions/", (route) =>
+    route.fulfill({
+      json: {
+        status: "match",
+        pairsChecked: 1,
+        totalPairs: 2,
+        reason: "missing_label",
+        matches: [
+          {
+            names: ["Ibuprofen", "Aspirin"],
+            findings: [
+              {
+                sourceMedication: "Ibuprofen",
+                targetMedication: "Aspirin",
+                matchedTerm: "aspirin",
+                text: "Ask a pharmacist about aspirin.",
+                sourceUrl: "https://api.fda.gov/drug/label.json",
+                labelEffectiveDate: "2026-10-19",
+                datasetUpdatedAt: null,
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/my-medication");
+  await expect(
+    page.getByText("Potential interaction information found in 1 pair."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Some pairs could not be checked."),
+  ).toBeVisible();
+  await page.getByText("Review matches").click();
+  await expect(page.getByRole("link", { name: /View source/ })).toBeVisible();
+  await expect(page.getByText("Ask a pharmacist about aspirin.")).toBeVisible();
 });
 
 test("typing in search and account inputs keeps the page rendered", async ({

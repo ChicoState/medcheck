@@ -36,3 +36,41 @@ class SavedMedication(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "medication"], name="unique_user_label")
         ]
+
+
+class MedicationSchedule(models.Model):
+    objects = models.Manager()
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class MedicationDose(models.Model):
+    objects = models.Manager()
+    schedule = models.ForeignKey(MedicationSchedule, on_delete=models.CASCADE, related_name="doses")
+    day_of_week = models.PositiveSmallIntegerField()
+    medication_name = models.CharField(max_length=200)
+    time = models.TimeField()
+    with_food = models.BooleanField()
+    saved_medication = models.ForeignKey(
+        SavedMedication,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="scheduled_doses",
+    )
+    period = models.CharField(max_length=10, blank=True)
+
+    class Meta:
+        ordering = ["day_of_week", "time", "medication_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["saved_medication", "day_of_week"],
+                condition=models.Q(saved_medication__isnull=False),
+                name="unique_saved_dose_day",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(day_of_week__gte=0, day_of_week__lte=6),
+                name="valid_schedule_day",
+            ),
+        ]

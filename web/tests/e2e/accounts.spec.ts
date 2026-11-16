@@ -33,6 +33,28 @@ test("accounts unlock My Medication and survive reload until sign out", async ({
       json: { user },
     });
   });
+  await page.route("**/api/medications/schedule/", (route) =>
+    route.fulfill({
+      json: {
+        schedule: {
+          Monday: [],
+          Tuesday: [],
+          Wednesday: [
+            {
+              id: 1,
+              name: "Atorvastatin",
+              time: "9:00 PM",
+              food: "without food",
+            },
+          ],
+          Thursday: [],
+          Friday: [],
+          Saturday: [],
+          Sunday: [],
+        },
+      },
+    }),
+  );
   await page.goto("/");
   await page.getByRole("button", { name: "Open menu" }).click();
   await expect(page.getByRole("link", { name: "My Medication" })).toHaveCount(
@@ -59,6 +81,27 @@ test("accounts unlock My Medication and survive reload until sign out", async ({
   await expect(
     page.getByRole("heading", { name: "My Medication" }),
   ).toBeVisible();
+  await expect(page.locator(".organizer-day")).toHaveCount(7);
+  await expect(
+    page.locator(".organizer-day").nth(2).locator("img"),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: /Wednesday/ }).click();
+  await expect(page.getByRole("button", { name: /Wednesday/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByText("Atorvastatin")).toBeVisible();
+  await expect(page.getByText("9:00 PM")).toBeVisible();
+  await expect(page.getByText("Take without food")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const strip = page.locator(".organizer-scroll");
+  await expect(strip).toBeVisible();
+  expect(
+    await strip.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+  await expect(page.getByText("Atorvastatin")).toBeVisible();
   await page.reload();
   await expect(
     page.getByRole("heading", { name: "My Medication" }),

@@ -4,6 +4,11 @@
 
 MedCheck offers live openFDA drug-label search and detail pages. Signed-in users
 can save product labels to a private My Medication library and remove them later.
+The My Medication page also shows an account-owned weekly medication organizer.
+Saved medicines can be assigned to any day of the week with a morning, afternoon, or
+evening time. Example doses appear until the first saved medicine is scheduled.
+Below the saved list, a compact openFDA label check reports matching interaction
+text, a completed check with no matches, or an incomplete check.
 The Django account API uses session authentication and CSRF protection. This is
 a reference tool, not personal medical advice or a medication regimen tracker.
 

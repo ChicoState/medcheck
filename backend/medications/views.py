@@ -1,16 +1,93 @@
 import hashlib
 import json
-from datetime import date, timedelta
+import re
+from datetime import date, time, timedelta
+from itertools import combinations
 from uuid import UUID
 
 from django.core.cache import cache
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from .interactions import check_label_pair
-from .models import Medication, SavedMedication
+from .models import Medication, MedicationDose, SavedMedication
 from .provider import ProviderError, get_label, search_labels, source_url
+from .services import get_or_create_schedule, serialize_schedule
+
+
+@require_GET
+def schedule(request):
+    if not request.user.is_authenticated:
+        return _error("AUTH_REQUIRED", "Sign in to view your medication schedule.", 401)
+    user_schedule = get_or_create_schedule(request.user)
+    return JsonResponse({"schedule": serialize_schedule(user_schedule)})
+
+
+@require_http_methods(["PUT", "DELETE"])
+def schedule_item(request, saved_id):
+    if not request.user.is_authenticated:
+        return _error("AUTH_REQUIRED", "Sign in to update your schedule.", 401)
+    saved = (
+        SavedMedication.objects.filter(pk=saved_id, user=request.user)
+        .select_related("medication")
+        .first()
+    )
+    if saved is None:
+        return _error("NOT_FOUND", "Saved medication not found.", 404)
+    if request.method == "DELETE":
+        MedicationDose.objects.filter(saved_medication=saved, schedule__user=request.user).delete()
+        return HttpResponse(status=204)
+    if len(request.body) > 4096:
+        return _error("INVALID_INPUT", "Choose days, a period, and a valid time.", 400)
+    try:
+        body = json.loads(request.body)
+        days = body["days"]
+        period = body["period"]
+        raw_time = body["time"]
+        if (
+            not isinstance(raw_time, str)
+            or re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", raw_time) is None
+        ):
+            raise ValueError("Invalid time")
+        dose_time = time.fromisoformat(raw_time)
+    except (ValueError, TypeError, KeyError, UnicodeDecodeError, AttributeError):
+        return _error("INVALID_INPUT", "Choose days, a period, and a valid time.", 400)
+    if (
+        not isinstance(days, list)
+        or not days
+        or len(days) > 7
+        or any(type(day) is not int or day not in range(7) for day in days)
+        or len(set(days)) != len(days)
+        or period not in ("morning", "afternoon", "evening")
+        or dose_time.tzinfo is not None
+    ):
+        return _error("INVALID_INPUT", "Choose days, a period, and a valid time.", 400)
+    with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
+        user_schedule = get_or_create_schedule(request.user)
+        MedicationDose.objects.filter(
+            schedule=user_schedule, saved_medication__isnull=True
+        ).delete()
+        MedicationDose.objects.filter(saved_medication=saved, schedule=user_schedule).delete()
+        MedicationDose.objects.bulk_create(
+            [
+                MedicationDose(
+                    schedule=user_schedule,
+                    saved_medication=saved,
+                    day_of_week=day,
+                    medication_name=saved.medication.display_name[:200],
+                    time=dose_time,
+                    with_food=False,
+                    period=period,
+                )
+                for day in days
+            ]
+        )
+    return JsonResponse(
+        {"days": sorted(days), "period": period, "time": dose_time.strftime("%H:%M")}
+    )
+
 
 FRESH_FOR = timedelta(hours=24)
 
@@ -229,6 +306,82 @@ def interaction_check(request):
     return JsonResponse(check_label_pair(*labels))
 
 
+@require_GET
+def saved_interactions(request):
+    if not request.user.is_authenticated:
+        return _error("AUTH_REQUIRED", "Sign in to check saved medications.", 401)
+    saved = list(
+        SavedMedication.objects.filter(user=request.user)
+        .select_related("medication")
+        .order_by("pk")[:11]
+    )
+    count = len(saved)
+    total_pairs = count * (count - 1) // 2
+    if count < 2 or count > 10:
+        return JsonResponse(
+            {
+                "status": "incomplete",
+                "pairsChecked": 0,
+                "totalPairs": total_pairs,
+                "matches": [],
+                "reason": "too_many" if count > 10 else "need_two",
+            }
+        )
+
+    labels = {}
+    for item in saved:
+        try:
+            record = _medication(item.medication.external_id)
+        except ProviderError:
+            record = None
+        if (
+            record
+            and timezone.now() - record.fetched_at < FRESH_FOR
+            and any(
+                section.get("key") == "drug_interactions" and section.get("text")
+                for section in record.label_sections
+            )
+        ):
+            labels[item.pk] = _details(record, True)
+
+    checked = 0
+    matches = []
+    for first, second in combinations(saved, 2):
+        if first.pk not in labels or second.pk not in labels:
+            continue
+        checked += 1
+        findings = check_label_pair(labels[first.pk], labels[second.pk])["findings"]
+        if findings:
+            matches.append(
+                {
+                    "names": [first.medication.display_name, second.medication.display_name],
+                    "findings": [
+                        {**finding, "text": finding["text"][:600]} for finding in findings
+                    ],
+                }
+            )
+    return JsonResponse(
+        {
+            "status": "match" if matches else "clear" if checked == total_pairs else "incomplete",
+            "pairsChecked": checked,
+            "totalPairs": total_pairs,
+            "matches": matches,
+            "reason": "missing_label" if checked != total_pairs else None,
+        }
+    )
+
+
+def _schedule_plan(saved):
+    doses = list(saved.scheduled_doses.all())
+    if not doses:
+        return None
+    return {
+        "days": sorted(dose.day_of_week for dose in doses),
+        "period": doses[0].period,
+        "time": doses[0].time.strftime("%H:%M"),
+    }
+
+
 @require_http_methods(["GET", "POST"])
 def saved_collection(request):
     if not request.user.is_authenticated:
@@ -241,6 +394,7 @@ def saved_collection(request):
         records = (
             SavedMedication.objects.filter(user=request.user)
             .select_related("medication")
+            .prefetch_related("scheduled_doses")
             .order_by("-saved_at", "-pk")
         )
         total = records.count()
@@ -254,6 +408,7 @@ def saved_collection(request):
                 else None,
                 "fetchedAt": item.medication.fetched_at.isoformat(),
                 "isStale": timezone.now() - item.medication.fetched_at >= FRESH_FOR,
+                "schedulePlan": _schedule_plan(item),
             }
             for item in records[(page - 1) * size : page * size]
         ]

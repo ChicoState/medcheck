@@ -5,6 +5,9 @@
 `infrastructure_plan.md` is the source of truth for architectural decisions. The
 web tooling, Playwright tests, Docker foundation, Django session-based account
 API, live openFDA label search, and private saved-medication library are in place.
+The My Medication page includes an account-owned weekly organizer. Saved
+medicines can be scheduled on any day with a selected time; example doses
+appear until the first saved medicine is scheduled.
 Do not expand product behavior while performing infrastructure work.
 
 ## Repository map

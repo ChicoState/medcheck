@@ -27,6 +27,13 @@ export type SavedMedication = MedicationSummary & {
   savedAt: string;
   labelEffectiveDate: string | null;
   isStale: boolean;
+  schedulePlan?: SchedulePlan | null;
+};
+
+export type SchedulePlan = {
+  days: number[];
+  period: "morning" | "afternoon" | "evening";
+  time: string;
 };
 
 export type InteractionFinding = {
@@ -46,10 +53,48 @@ export type InteractionResult = {
   disclaimer: string;
 };
 
+export type SavedInteractionStatus = {
+  status: "match" | "clear" | "incomplete";
+  pairsChecked: number;
+  totalPairs: number;
+  reason: "need_two" | "too_many" | "missing_label" | null;
+  matches: { names: string[]; findings: InteractionFinding[] }[];
+};
+
+export function savedInteractionStatus(): Promise<SavedInteractionStatus> {
+  return request("/api/saved-medications/interactions/");
+}
+
 export type Page<T> = {
   data: T[];
   pagination: { page: number; pageSize: number; hasNextPage: boolean };
 };
+
+export type ScheduledMedicine = {
+  id: number;
+  name: string;
+  time: string;
+  food: "with food" | "without food" | null;
+  period?: "morning" | "afternoon" | "evening" | null;
+};
+
+export type MedicationSchedule = Record<string, ScheduledMedicine[]>;
+
+export async function currentMedicationSchedule(): Promise<MedicationSchedule> {
+  const data = await request<{ schedule: MedicationSchedule }>(
+    "/api/medications/schedule/",
+  );
+  if (
+    !data.schedule ||
+    typeof data.schedule !== "object" ||
+    Array.isArray(data.schedule)
+  )
+    throw new MedicationError(
+      0,
+      "The medication service returned an invalid schedule.",
+    );
+  return data.schedule;
+}
 
 export class MedicationError extends Error {
   constructor(
@@ -152,6 +197,26 @@ export async function saveMedication(
 export async function removeMedication(savedId: number): Promise<void> {
   const token = await csrfToken();
   await request(`/api/saved-medications/${savedId}/`, {
+    method: "DELETE",
+    headers: { "X-CSRFToken": token },
+  });
+}
+
+export async function updateMedicationSchedule(
+  savedId: number,
+  plan: SchedulePlan,
+): Promise<void> {
+  const token = await csrfToken();
+  await request(`/api/medications/schedule/${savedId}/`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": token },
+    body: JSON.stringify(plan),
+  });
+}
+
+export async function removeMedicationSchedule(savedId: number): Promise<void> {
+  const token = await csrfToken();
+  await request(`/api/medications/schedule/${savedId}/`, {
     method: "DELETE",
     headers: { "X-CSRFToken": token },
   });

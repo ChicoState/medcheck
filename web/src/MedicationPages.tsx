@@ -6,22 +6,361 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { Account } from "./auth";
+import capsulePill from "./assets/pill-capsule.svg";
+import ovalPill from "./assets/pill-oval.svg";
+import roundPill from "./assets/pill-round.svg";
 import {
   MedicationDetail,
   MedicationSummary,
   InteractionResult,
+  SavedInteractionStatus,
   Page,
   SavedMedication,
+  MedicationSchedule,
+  SchedulePlan,
+  currentMedicationSchedule,
+  updateMedicationSchedule,
+  removeMedicationSchedule,
   medicationDetail,
   removeMedication,
   saveMedication,
   savedMedications,
   checkInteractions,
+  savedInteractionStatus,
   searchMedications,
 } from "./medications";
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : "Please try again.";
+}
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const PERIODS = ["morning", "afternoon", "evening"] as const;
+const DEFAULT_TIMES = {
+  morning: "08:00",
+  afternoon: "13:00",
+  evening: "20:00",
+};
+
+function displayTime(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+}
+
+function MedicineScheduleControl({
+  medicine,
+  onChange,
+}: {
+  medicine: SavedMedication;
+  onChange: (plan: SchedulePlan | null) => void;
+}) {
+  const [plan, setPlan] = useState<SchedulePlan | null>(
+    medicine.schedulePlan ?? null,
+  );
+  const [open, setOpen] = useState(false);
+  const [days, setDays] = useState(plan?.days ?? [0, 1, 2, 3, 4]);
+  const [period, setPeriod] = useState<SchedulePlan["period"]>(
+    plan?.period ?? "morning",
+  );
+  const [time, setTime] = useState(plan?.time ?? DEFAULT_TIMES.morning);
+  const [timeEdited, setTimeEdited] = useState(Boolean(plan));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function selectPeriod(next: SchedulePlan["period"]) {
+    setPeriod(next);
+    if (!timeEdited) setTime(DEFAULT_TIMES[next]);
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const next = { days: [...days].sort(), period, time };
+    try {
+      await updateMedicationSchedule(medicine.savedId, next);
+      setPlan(next);
+      setOpen(false);
+      onChange(next);
+    } catch (reason) {
+      setError(message(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clear() {
+    setBusy(true);
+    setError("");
+    try {
+      await removeMedicationSchedule(medicine.savedId);
+      setPlan(null);
+      setOpen(false);
+      onChange(null);
+    } catch (reason) {
+      setError(message(reason));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="schedule-control">
+      <div className="schedule-control-summary">
+        {plan ? (
+          <p>
+            <span className="schedule-dot" aria-hidden="true" />
+            {plan.days.map((day) => DAYS[day]).join(" · ")} · {plan.period} ·{" "}
+            {displayTime(plan.time)}
+          </p>
+        ) : (
+          <p className="schedule-unscheduled">Not in your pill case yet</p>
+        )}
+        <button
+          type="button"
+          className="schedule-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {plan ? "Edit schedule" : "Schedule"}
+        </button>
+      </div>
+      {open && (
+        <form className="schedule-form" onSubmit={save}>
+          <div className="schedule-form-heading">
+            <strong>Choose your days</strong>
+            <div className="schedule-day-shortcuts">
+              <button type="button" onClick={() => setDays([0, 1, 2, 3, 4])}>
+                Every weekday
+              </button>
+              <button
+                type="button"
+                onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])}
+              >
+                Every day
+              </button>
+            </div>
+          </div>
+          <div
+            className="schedule-day-options"
+            role="group"
+            aria-label={`Days for ${medicine.displayName}`}
+          >
+            {DAYS.map((name, day) => (
+              <button
+                type="button"
+                key={name}
+                className={days.includes(day) ? "selected" : ""}
+                aria-pressed={days.includes(day)}
+                onClick={() =>
+                  setDays((current) =>
+                    current.includes(day)
+                      ? current.filter((value) => value !== day)
+                      : [...current, day],
+                  )
+                }
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <strong>Time of day</strong>
+          <div
+            className="schedule-period-options"
+            role="group"
+            aria-label={`Time of day for ${medicine.displayName}`}
+          >
+            {PERIODS.map((option) => (
+              <button
+                type="button"
+                key={option}
+                className={period === option ? "selected" : ""}
+                aria-pressed={period === option}
+                onClick={() => selectPeriod(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <label className="schedule-time-label">
+            Exact time
+            <input
+              type="time"
+              value={time}
+              required
+              onChange={(event) => {
+                setTime(event.target.value);
+                setTimeEdited(true);
+              }}
+            />
+          </label>
+          {error && (
+            <p className="page-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="schedule-form-actions">
+            <button type="submit" disabled={busy || days.length === 0}>
+              {busy ? "Saving…" : plan ? "Save changes" : "Add to pill case"}
+            </button>
+            {plan && (
+              <button type="button" disabled={busy} onClick={clear}>
+                Remove schedule
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function WeeklyOrganizer() {
+  const [selectedDay, setSelectedDay] = useState("Monday");
+  const [schedule, setSchedule] = useState<MedicationSchedule | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const pillArtwork = [capsulePill, roundPill, ovalPill];
+  const monday = new Date();
+  const weekday = monday.getDay();
+  monday.setDate(monday.getDate() - (weekday === 0 ? 6 : weekday - 1));
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return {
+      name: date.toLocaleDateString("en-US", { weekday: "long" }),
+      number: date.getDate(),
+    };
+  });
+
+  useEffect(() => {
+    let active = true;
+    currentMedicationSchedule()
+      .then(
+        (value) => {
+          if (active) setSchedule(value);
+        },
+        (reason) => {
+          if (active) setError(message(reason));
+        },
+      )
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return (
+    <section className="weekly-organizer" aria-labelledby="organizer-title">
+      <div className="organizer-heading">
+        <div>
+          <p className="section-label">Your week at a glance</p>
+          <h2 id="organizer-title">Weekly organizer</h2>
+        </div>
+        <p className="organizer-caption">Choose a day to view its schedule</p>
+      </div>
+      {loading && <p role="status">Loading medication schedule…</p>}
+      {error && (
+        <p className="page-error" role="alert">
+          {error}
+        </p>
+      )}
+      {!loading && !error && (
+        <>
+          <p className="organizer-scroll-hint">Swipe to see all seven days</p>
+          <div className="organizer-scroll">
+            <div
+              className="organizer"
+              role="group"
+              aria-label="Medication week"
+            >
+              {days.map((day) => {
+                const doses = schedule?.[day.name] ?? [];
+                return (
+                  <button
+                    className="organizer-day"
+                    type="button"
+                    key={day.name}
+                    aria-label={`${day.name} ${day.number}, ${doses.length} doses`}
+                    aria-pressed={selectedDay === day.name}
+                    onClick={() => setSelectedDay(day.name)}
+                  >
+                    <span className="compartment-lid">
+                      <span className="compartment-weekday">
+                        {day.name.slice(0, 3)}
+                      </span>
+                      <span className="compartment-date">{day.number}</span>
+                    </span>
+                    <span className="compartment-well" aria-hidden="true">
+                      {doses.slice(0, 3).map((dose, index) => (
+                        <img
+                          className={`pill-art pill-art-${index + 1}`}
+                          src={pillArtwork[index % pillArtwork.length]}
+                          alt=""
+                          key={dose.id}
+                        />
+                      ))}
+                      {doses.length > 3 && (
+                        <span className="compartment-more">
+                          +{doses.length - 3}
+                        </span>
+                      )}
+                    </span>
+                    <span className="compartment-latch" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="organizer-details" aria-live="polite">
+            <div className="organizer-details-heading">
+              <span className="organizer-details-mark" aria-hidden="true" />
+              <div>
+                <p className="section-label">Open compartment</p>
+                <h3>{selectedDay}&apos;s medicines</h3>
+              </div>
+            </div>
+            {(schedule?.[selectedDay] ?? []).length ? (
+              <ul className="dose-list">
+                {schedule?.[selectedDay]?.map((dose, index) => (
+                  <li key={dose.id}>
+                    <img
+                      className="dose-art"
+                      src={pillArtwork[index % pillArtwork.length]}
+                      alt=""
+                    />
+                    <strong>{dose.name}</strong>
+                    <span className="dose-time">
+                      {dose.period ? `${dose.period} · ` : ""}
+                      {dose.time}
+                    </span>
+                    {dose.food && (
+                      <span className="dose-food">
+                        {dose.food === "with food"
+                          ? "Take with food"
+                          : "Take without food"}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No medicines scheduled for this day.</p>
+            )}
+          </div>
+        </>
+      )}
+    </section>
+  );
 }
 
 function MedicineLink({ medicine }: { medicine: MedicationSummary }) {
@@ -457,88 +796,109 @@ function InteractionResults({ result }: { result: InteractionResult }) {
   );
 }
 
-function AutomaticInteractions({
-  medicines,
-}: {
-  medicines: SavedMedication[];
-}) {
-  const [checks, setChecks] = useState<
-    { key: string; names: string; result?: InteractionResult; error?: string }[]
-  >([]);
-  const [checking, setChecking] = useState(false);
-
+function LibraryInteractionStatus() {
+  const [result, setResult] = useState<SavedInteractionStatus | null>(null);
+  const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    setChecks([]);
-    setChecking(medicines.length > 1);
-    async function screen() {
-      await Promise.resolve();
-      for (let first = 0; first < medicines.length; first++) {
-        for (let second = first + 1; second < medicines.length; second++) {
-          if (!active) return;
-          const key = `${medicines[first].savedId}:${medicines[second].savedId}`;
-          const names = `${medicines[first].displayName} + ${medicines[second].displayName}`;
-          try {
-            const result = await checkInteractions(
-              medicines[first],
-              medicines[second],
-            );
-            if (active)
-              setChecks((current) => [...current, { key, names, result }]);
-          } catch (reason) {
-            if (active)
-              setChecks((current) => [
-                ...current,
-                { key, names, error: message(reason) },
-              ]);
-          }
-        }
-      }
-      if (active) setChecking(false);
-    }
-    void screen();
+    savedInteractionStatus().then(
+      (value) => {
+        if (active) setResult(value);
+      },
+      (reason) => {
+        if (active) setError(message(reason));
+      },
+    );
     return () => {
       active = false;
     };
-  }, [medicines]);
+  }, []);
+
+  const status = result?.status ?? "incomplete";
+  const copy = !result
+    ? "Checking saved product labels…"
+    : status === "match"
+      ? `Potential interaction information found in ${result.matches.length} ${result.matches.length === 1 ? "pair" : "pairs"}.`
+      : status === "clear"
+        ? `No interaction text found in ${result.pairsChecked} checked ${result.pairsChecked === 1 ? "pair" : "pairs"}.`
+        : result.reason === "need_two"
+          ? "Add another medicine to check pairs."
+          : result.reason === "too_many"
+            ? "Too many saved medicines to check at once."
+            : "Unable to complete the check for every pair.";
 
   return (
     <section
-      className="interaction-card"
-      aria-labelledby="saved-interactions-title"
+      className={`library-interactions library-interactions-${status}`}
+      aria-labelledby="library-interactions-title"
     >
-      <h2 id="saved-interactions-title">Interaction screening</h2>
-      <p>
-        Your saved medications are checked automatically against each other
-        using current product labels. No match does not mean they are safe to
-        combine.
-      </p>
-      {medicines.length < 2 && (
-        <p>Save at least two medications to check their labels together.</p>
-      )}
-      {checking && (
-        <p role="status">
-          Checking saved medication pairs… {checks.length} of{" "}
-          {(medicines.length * (medicines.length - 1)) / 2} checked.
-        </p>
-      )}
-      {checks.map((check) => (
-        <article key={check.key}>
-          <h3>{check.names}</h3>
-          {check.error && (
-            <p className="page-error" role="alert">
-              Could not check this pair: {check.error}
-            </p>
+      <div className="library-interactions-top">
+        <span className="library-interactions-icon" aria-hidden="true">
+          {error
+            ? "⚪"
+            : status === "match"
+              ? "🔴"
+              : status === "clear"
+                ? "🟢"
+                : "⚪"}
+        </span>
+        <div>
+          <h2 id="library-interactions-title">Label interaction check</h2>
+          {error ? (
+            <p role="alert">Unable to check saved product labels. {error}</p>
+          ) : (
+            <p role={result ? undefined : "status"}>{copy}</p>
           )}
-          {check.result && <InteractionResults result={check.result} />}
-        </article>
-      ))}
-      {!checking && medicines.length > 1 && (
-        <p role="status">
-          Screening finished. {checks.filter((check) => check.result).length} of{" "}
-          {checks.length} pairs checked successfully.
+        </div>
+      </div>
+      {result && result.totalPairs > 0 && (
+        <p className="library-interactions-count">
+          {result.pairsChecked} of {result.totalPairs} pairs checked
         </p>
       )}
+      {result?.status === "match" && (
+        <details className="library-interactions-details">
+          <summary>Review matches</summary>
+          {result.matches.map((pair) => (
+            <article key={pair.names.join(":")}>
+              <h3>{pair.names.join(" + ")}</h3>
+              {pair.findings.map((finding) => (
+                <div
+                  key={`${finding.sourceMedication}:${finding.targetMedication}`}
+                >
+                  <p>
+                    {finding.sourceMedication} label mentions{" "}
+                    {finding.matchedTerm}:
+                  </p>
+                  <p className="library-interactions-excerpt">{finding.text}</p>
+                  <p className="library-interactions-source">
+                    Label effective{" "}
+                    {finding.labelEffectiveDate ?? "date unavailable"} · Dataset
+                    updated {finding.datasetUpdatedAt ?? "date unavailable"} ·{" "}
+                    <a
+                      href={finding.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View source ↗
+                    </a>
+                  </p>
+                </div>
+              ))}
+            </article>
+          ))}
+        </details>
+      )}
+      {result?.status === "match" &&
+        result.pairsChecked < result.totalPairs && (
+          <p className="library-interactions-caveat">
+            Some pairs could not be checked.
+          </p>
+        )}
+      <p className="library-interactions-caveat">
+        A label search cannot establish that medicines are safe together. Ask a
+        pharmacist or healthcare professional.
+      </p>
     </section>
   );
 }
@@ -550,6 +910,7 @@ export function SavedPage() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [scheduleRevision, setScheduleRevision] = useState(0);
   useEffect(() => {
     let active = true;
     setResults(null);
@@ -577,6 +938,7 @@ export function SavedPage() {
     setError("");
     try {
       await removeMedication(item.savedId);
+      setScheduleRevision((current) => current + 1);
       setConfirmId(null);
       setResults(
         (current) =>
@@ -617,7 +979,6 @@ export function SavedPage() {
       {results &&
         (results.data.length ? (
           <>
-            <AutomaticInteractions medicines={results.data} />
             <ul className="medicine-list">
               {results.data
                 .slice(
@@ -628,6 +989,12 @@ export function SavedPage() {
                   <li key={medicine.savedId}>
                     <MedicineLink medicine={medicine} />
                     <Metadata medicine={medicine} />
+                    <MedicineScheduleControl
+                      medicine={medicine}
+                      onChange={() =>
+                        setScheduleRevision((current) => current + 1)
+                      }
+                    />
                     {medicine.isStale && (
                       <p className="page-note">
                         Saved label may be out of date. Open it to check for an
@@ -694,6 +1061,12 @@ export function SavedPage() {
             </button>
           </div>
         ))}
+      {results && (
+        <LibraryInteractionStatus
+          key={results.data.map((item) => item.savedId).join(",")}
+        />
+      )}
+      <WeeklyOrganizer key={scheduleRevision} />
     </section>
   );
 }
