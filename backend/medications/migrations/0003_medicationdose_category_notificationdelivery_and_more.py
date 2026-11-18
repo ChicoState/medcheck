@@ -50,9 +50,9 @@ class Migration(migrations.Migration):
                         auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
                     ),
                 ),
-                ("dose_reminders", models.BooleanField(default=True)),
-                ("vitamin_reminders", models.BooleanField(default=True)),
-                ("refill_reminders", models.BooleanField(default=True)),
+                ("dose_reminders", models.BooleanField(default=True)),  # pyright: ignore[reportArgumentType]
+                ("vitamin_reminders", models.BooleanField(default=True)),  # pyright: ignore[reportArgumentType]
+                ("refill_reminders", models.BooleanField(default=True)),  # pyright: ignore[reportArgumentType]
                 (
                     "user",
                     models.OneToOneField(

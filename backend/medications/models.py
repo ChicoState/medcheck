@@ -39,6 +39,7 @@ class SavedMedication(models.Model):
 
 
 class MedicationSchedule(models.Model):
+    objects = models.Manager()
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -49,6 +50,8 @@ class MedicationSchedule(models.Model):
 
 
 class MedicationDose(models.Model):
+    objects = models.Manager()
+
     class Category(models.TextChoices):
         MEDICATION = "medication", "Medication"
         VITAMIN = "vitamin", "Vitamin"
@@ -83,17 +86,19 @@ class MedicationDose(models.Model):
 
 
 class NotificationSettings(models.Model):
+    objects = models.Manager()
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="notification_settings",
     )
-    dose_reminders = models.BooleanField(default=True)
-    vitamin_reminders = models.BooleanField(default=True)
-    refill_reminders = models.BooleanField(default=True)
+    dose_reminders = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
+    vitamin_reminders = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
+    refill_reminders = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
 
 
 class RefillReminder(models.Model):
+    objects = models.Manager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     due_date = models.DateField()
@@ -109,6 +114,7 @@ class RefillReminder(models.Model):
 
 
 class NotificationDelivery(models.Model):
+    objects = models.Manager()
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     dedupe_key = models.CharField(max_length=255, unique=True)
     kind = models.CharField(max_length=24)

@@ -24,7 +24,7 @@ def _settings_for(user):
 
 def _send_once(user, kind, dedupe_key, subject, body):
     try:
-        with transaction.atomic():
+        with transaction.atomic():  # pyright: ignore[reportGeneralTypeIssues]
             NotificationDelivery.objects.create(user=user, kind=kind, dedupe_key=dedupe_key)
     except IntegrityError:
         return False

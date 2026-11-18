@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -19,11 +20,11 @@ from medications.models import (
 pytestmark = pytest.mark.django_db
 
 
-def logged_in(email="member@example.com"):
+def logged_in(email="member@example.com") -> tuple[Any, Any]:
     user = get_user_model().objects.create_user(
         username=email, email=email, password="a-strong-password"
     )
-    client = Client()
+    client: Any = Client()
     client.force_login(user)
     return client, user
 
@@ -118,9 +119,9 @@ def test_notification_command_sends_dose_vitamin_and_refill_emails_once():
         call_command("send_medication_notifications")
         call_command("send_medication_notifications")
 
-    assert len(mail.outbox) == 3
+    assert len(mail.outbox) == 3  # pyright: ignore[reportAttributeAccessIssue]
     assert NotificationDelivery.objects.filter(user=user).count() == 3
-    assert {message.subject for message in mail.outbox} == {
+    assert {message.subject for message in mail.outbox} == {  # pyright: ignore[reportAttributeAccessIssue]
         "Time to take Lisinopril",
         "Time to take Vitamin D",
         "Lisinopril refill reminder",
@@ -128,5 +129,6 @@ def test_notification_command_sends_dose_vitamin_and_refill_emails_once():
 
 
 def test_notifications_require_authentication():
-    assert Client().get("/api/notifications/settings/").status_code == 401
-    assert Client().get("/api/notifications/refills/").status_code == 401
+    client: Any = Client()
+    assert client.get("/api/notifications/settings/").status_code == 401
+    assert client.get("/api/notifications/refills/").status_code == 401

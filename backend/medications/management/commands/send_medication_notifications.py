@@ -8,4 +8,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         sent = send_due_notifications()
-        self.stdout.write(self.style.SUCCESS(f"Sent {sent} notification(s)."))
+        self.stdout.write(  # pyright: ignore[reportAttributeAccessIssue]
+            self.style.SUCCESS(  # pyright: ignore[reportAttributeAccessIssue]
+                f"Sent {sent} notification(s)."
+            )
+        )
