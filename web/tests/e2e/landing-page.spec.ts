@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("centers MedCheck above the search bar", async ({ page }) => {
   await page.goto("/");

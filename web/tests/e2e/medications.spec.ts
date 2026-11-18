@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const id = "00653b7c-7099-487e-9a01-e89781c21323";
 const medicine = {
@@ -150,9 +150,11 @@ test("shows provider errors without losing the search form", async ({
     }),
   );
   await page.goto("/search?q=ibuprofen");
-  await expect(page.getByRole("alert")).toHaveText(
-    "Drug information is temporarily unavailable.",
-  );
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Drug information is temporarily unavailable." }),
+  ).toHaveText("Drug information is temporarily unavailable.");
   await expect(
     page.getByRole("searchbox", { name: "Medication name" }),
   ).toBeVisible();

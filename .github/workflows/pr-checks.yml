@@ -15,14 +15,15 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-
+      - name: Scan repository history for secrets
+        uses: docker://ghcr.io/gitleaks/gitleaks:v8.30.1
+        with:
+          args: git --redact --exit-code 1 .
   backend:
     name: Backend tooling
-    runs-on: ubuntu-latest
+    # Python 3.13.11 is published for Ubuntu 24.04, but not Ubuntu 26.04.
+    # Keep this runner pinned while backend/.python-version remains exact.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17.6
@@ -63,7 +64,7 @@ jobs:
           DJANGO_SECRET_KEY: test-secret-key-for-ci
           DATABASE_URL: postgresql://medcheck:ci-only-password@localhost:5432/medcheck_test
       - name: Scan Python application code
-        run: uv run bandit --quiet --recursive accounts config medications
+        run: uv run bandit --quiet --recursive accounts medications config
       - name: Upload backend coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -82,7 +83,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.4.1
+          package_json_file: web/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.3
