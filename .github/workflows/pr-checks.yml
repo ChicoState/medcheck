@@ -18,7 +18,7 @@ jobs:
       - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
   backend:
     name: Backend tooling
     # Python 3.13.11 is published for Ubuntu 24.04, but not Ubuntu 26.04.
