@@ -2,6 +2,7 @@ name: Pull-request checks
 
 on:
   pull_request:
+  push:
 
 permissions:
   contents: read
@@ -14,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       # The GitHub Action requires a GITLEAKS_LICENSE for organization-owned
       # repositories. Install the MIT-licensed CLI directly so forked pull
       # requests can run the blocking secret scan without that secret.
@@ -26,8 +27,8 @@ jobs:
             | tar --extract --gzip --file=- --directory=/usr/local/bin gitleaks
       - name: Run Gitleaks
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: gitleaks detect --source . --log-opts "${BASE_SHA}..${HEAD_SHA}" --verbose
   backend:
     name: Backend tooling
