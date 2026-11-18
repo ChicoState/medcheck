@@ -254,7 +254,11 @@ test("automatically checks the full library, keeps partial results, and rechecks
   await expect(
     page.getByText("Consult a pharmacist about aspirin."),
   ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText("Provider unavailable.");
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "Could not check this pair: Provider unavailable." }),
+  ).toHaveText("Could not check this pair: Provider unavailable.");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(
     page.getByRole("link", { name: "Third medicine" }),
