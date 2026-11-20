@@ -39,6 +39,7 @@ class SavedMedication(models.Model):
 
 
 class MedicationSchedule(models.Model):
+    objects = models.Manager()
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -49,6 +50,12 @@ class MedicationSchedule(models.Model):
 
 
 class MedicationDose(models.Model):
+    objects = models.Manager()
+
+    class Category(models.TextChoices):
+        MEDICATION = "medication", "Medication"
+        VITAMIN = "vitamin", "Vitamin"
+
     schedule = models.ForeignKey(
         MedicationSchedule,
         on_delete=models.CASCADE,
@@ -58,6 +65,11 @@ class MedicationDose(models.Model):
     medication_name = models.CharField(max_length=200)
     time = models.TimeField()
     with_food = models.BooleanField()
+    category = models.CharField(
+        max_length=16,
+        choices=Category.choices,
+        default=Category.MEDICATION,
+    )
 
     class Meta:
         ordering = ["day_of_week", "time", "medication_name"]
@@ -71,3 +83,39 @@ class MedicationDose(models.Model):
                 name="valid_schedule_day",
             ),
         ]
+
+
+class NotificationSettings(models.Model):
+    objects = models.Manager()
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notification_settings",
+    )
+    dose_reminders = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
+    vitamin_reminders = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
+    refill_reminders = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
+
+
+class RefillReminder(models.Model):
+    objects = models.Manager()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    due_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["due_date", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "name", "due_date"], name="unique_user_refill_reminder"
+            )
+        ]
+
+
+class NotificationDelivery(models.Model):
+    objects = models.Manager()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    dedupe_key = models.CharField(max_length=255, unique=True)
+    kind = models.CharField(max_length=24)
+    sent_at = models.DateTimeField(auto_now_add=True)
